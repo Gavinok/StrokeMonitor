@@ -234,12 +234,6 @@ uint32_t timer = millis();
 uint32_t timer1 = millis();
 uint32_t NonStrokeTimer = millis();
 
-/*float StrokeRate()
-{
-  int strokespermilli = (Strokes/(millis() - timer));
-  return 1000*strokespermilli;
-}*/
-
 void loop()                     // run over and over again
 {
     #ifdef LCD
@@ -432,8 +426,16 @@ void loop()                     // run over and over again
               Serial.print(loops);
             #endif
             Strokes++;
-            LowScan++;
+            if(LowScan < loopLimit - 1)
+            { 
+              LowScan++;
+            }
+            else
+            {
+              LowScan = 0;
+            }
             NonStrokeTimer = millis();
+
           }
         }
       }
@@ -456,7 +458,11 @@ void loop()                     // run over and over again
     return OldPositionNegative;
   }
 #endif
-
+/**
+ * @brief finds the lowest value in an array low scan
+ * 
+ * @return int lowest value in an array
+ */
 int findLowest()
 {
 
@@ -474,6 +480,10 @@ int findLowest()
   }
   return Lowest;
 }
+/**
+ * @brief resets the threshhold based on the lowest value it can find in the array low
+ * 
+ */
 void resetTHreshhold()
 {
   if(loops >= loopLimit)
