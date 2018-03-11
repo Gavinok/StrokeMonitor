@@ -130,7 +130,10 @@
 #ifdef Gps
   File GPSlog; //Data object you will write your sensor data to
 #endif
-
+//====================================function prototypes=========//
+void resetTHreshhold();
+int findLowest();
+boolean LowPeekDetection();
 void setup()  
 { 
 
@@ -194,89 +197,6 @@ void setup()
   }
 #endif
 
-int findLowest()
-{
-
-  Lowest = 1000;
-  for(uint8_t scan; scan < loopLimit; scan++)
-  {
-    #ifdef debug
-      Serial.print(F("low[scan] here ........................"));
-      Serial.println(Low[scan]);
-    #endif
-    if((Lowest > Low[scan]) && !(Low[scan] ==0))
-    {
-      Lowest = Low[scan];
-    }
-  }
-  return Lowest;
-}
-
-#ifdef LowPeek
-  boolean LowPeekDetection()
-  {
-    int currentaverage = 0;    // current averaged reading
-    for (int scan=0; scan<= numaverages; scan++){       // loop for numaverages
-      currentaverage += analogRead(xpin);   // sum up readings assuming that the xaxis is in the same direction as the boat
-    }
-    currentaverage /= numaverages;     // divide total sum by num. avg. to get average
-    #ifdef debug
-      Serial.print(F("currentaverage "));
-      Serial.println(currentaverage);
-      Serial.print(F("oldaverage "));
-      Serial.println(oldaverage);
-      //this is used to avoid registering values when the boat is stationary
-     // #ifdef debug
-     //   if(currentaverage < 100 )
-         // currentaverage = oldaverage;
-     // #endif
-
-    #endif
-    if ((currentaverage > oldaverage * StaticChangeThreshhold)){    // if current is greater than previous (negative slope) and old slope was negative, a local minima was reached
-    #ifdef debug
-      Serial.print(F("peekdetection begin "));
-      Serial.println(OldPositionNegative);
-      Serial.print(F("Total ChangeThreshhold "));
-      Serial.println(oldaverage * StaticChangeThreshhold);
-    #endif
-      if(OldPositionNegative == false){
-        if(oldaverage < (threshhold * StaticPercentOfThreshhold)){
-          // local minima value, do stuff here
-          #ifdef debug
-              Serial.print(F("TotalThreshhold "));
-              Serial.println(threshhold * StaticPercentOfThreshhold);
-          #endif
-          OldPositionNegative = true;      // the if statement already checked for positive slope, so it makes sense to set the value for the next pass here
-          Low[LowScan] = currentaverage;  //add this minima to the array of minima
-          
-          #ifdef debug
-            Serial.println(F("loop count "));
-            Serial.print(loops);
-          #endif
-          Strokes++;
-          LowScan++;
-        }
-      }
-    }
-    #ifdef debug
-      Serial.print(F("peekdetection end "));
-      Serial.println(OldPositionNegative);
-    #endif
-    if (currentaverage - oldaverage < 0){  // set old slope variable to negative if applicable
-        if(OldPositionNegative == true)
-        {
-            int peak = oldaverage;
-            Serial.print(F("peak"));
-            Serial.println(peak);
-        }
-      OldPositionNegative = false;
-    }
-    oldaverage = currentaverage;    // sets current values to old values
-    loops++;
-    return OldPositionNegative;
-  }
-#endif
-
 #ifdef RawAccelerometer
   void AccelerometerWright()
   {
@@ -312,12 +232,13 @@ int findLowest()
 //Initialize timer
 uint32_t timer = millis();
 uint32_t timer1 = millis();
+uint32_t NonStrokeTimer = millis();
 
-float StrokeRate()
+/*float StrokeRate()
 {
   int strokespermilli = (Strokes/(millis() - timer));
   return 1000*strokespermilli;
-}
+}*/
 
 void loop()                     // run over and over again
 {
@@ -366,6 +287,7 @@ void loop()                     // run over and over again
   #endif
   // if millis() or timer wraps around, we'll just reset it
   if (timer > millis())  timer = millis();
+  if (NonStrokeTimer > millis())  NonStrokeTimer = millis();
   /*
   Accelerometer wrights to SD Card
   */
@@ -374,29 +296,7 @@ void loop()                     // run over and over again
         //if a new peek below the threshold is found add a stroke
         #ifdef LowPeek
           LowPeekDetection();
-          if(loops >= loopLimit)
-          {
-            //sets Lowest to the lowest value in the array low[]
-            int Lowest = findLowest();
-            #ifdef debug
-              Serial.print(F("lowest "));
-              Serial.println(Lowest);
-            #endif
-            //if the new threshold is above the ThreshholdMinimum replace the threshold
-            if(Lowest > minimumLowest)
-            {
-              #ifdef debug
-                  Serial.print(F("lowest "));
-                  Serial.println(Lowest);
-              #endif
-              threshhold = Lowest;
-              #ifdef debug
-                Serial.println(F("threshhold reset "));
-                Serial.println(threshhold);
-              #endif
-            }
-            loops = 0;
-          }
+          resetTHreshhold();
         #endif
         
       #ifdef SDCard
@@ -495,5 +395,114 @@ void loop()                     // run over and over again
 
     }
   #endif
+  }
+}
+
+#ifdef LowPeek
+  boolean LowPeekDetection()
+  {
+    int currentaverage = 0;    // current averaged reading
+    for (int scan=0; scan<= numaverages; scan++){       // loop for numaverages
+      currentaverage += analogRead(xpin);   // sum up readings assuming that the xaxis is in the same direction as the boat
+    }
+    currentaverage /= numaverages;     // divide total sum by num. avg. to get average
+    #ifdef debug
+      Serial.print(F("currentaverage "));
+      Serial.println(currentaverage);
+      Serial.print(F("oldaverage "));
+      Serial.println(oldaverage);
+      //this is used to avoid registering values when the boat is stationary
+     // #ifdef debug
+     //   if(currentaverage < 100 )
+         // currentaverage = oldaverage;
+     // #endif
+
+    #endif
+    if ((currentaverage > oldaverage * StaticChangeThreshhold)){    // if current is greater than previous (negative slope) and old slope was negative, a local minima was reached
+    #ifdef debug
+      Serial.print(F("peekdetection begin "));
+      Serial.println(OldPositionNegative);
+      Serial.print(F("Total ChangeThreshhold "));
+      Serial.println(oldaverage * StaticChangeThreshhold);
+    #endif
+      if(OldPositionNegative == false){
+        if(oldaverage < (threshhold * StaticPercentOfThreshhold)){
+          // local minima value, do stuff here
+          #ifdef debug
+              Serial.print(F("TotalThreshhold "));
+              Serial.println(threshhold * StaticPercentOfThreshhold);
+          #endif
+          OldPositionNegative = true;      // the if statement already checked for positive slope, so it makes sense to set the value for the next pass here
+          Low[LowScan] = currentaverage;  //add this minima to the array of minima
+          
+          #ifdef debug
+            Serial.println(F("loop count "));
+            Serial.print(loops);
+          #endif
+          Strokes++;
+          LowScan++;
+        }
+      }
+    }
+    #ifdef debug
+      Serial.print(F("peekdetection end "));
+      Serial.println(OldPositionNegative);
+    #endif
+    if (currentaverage - oldaverage < 0){  // set old slope variable to negative if applicable
+        if(OldPositionNegative == true)
+        {
+            int peak = oldaverage;
+            Serial.print(F("peak"));
+            Serial.println(peak);
+        }
+      OldPositionNegative = false;
+    }
+    oldaverage = currentaverage;    // sets current values to old values
+    loops++;
+    return OldPositionNegative;
+  }
+#endif
+
+int findLowest()
+{
+
+  Lowest = 1000;
+  for(uint8_t scan; scan < loopLimit; scan++)
+  {
+    #ifdef debug
+      Serial.print(F("low[scan] here ........................"));
+      Serial.println(Low[scan]);
+    #endif
+    if((Lowest > Low[scan]) && !(Low[scan] ==0))
+    {
+      Lowest = Low[scan];
+    }
+  }
+  return Lowest;
+}
+void resetTHreshhold();
+{
+  if(loops >= loopLimit)
+  {
+    //sets Lowest to the lowest value in the array low[]
+    int Lowest = findLowest();
+    #ifdef debug
+      Serial.print(F("lowest "));
+      Serial.println(Lowest);
+    #endif
+    //if the new threshold is above the ThreshholdMinimum replace the threshold
+    if(Lowest > minimumLowest)
+    {
+      #ifdef debug
+          Serial.print(F("lowest "));
+          Serial.println(Lowest);
+      #endif
+      threshhold = Lowest;
+      #ifdef debug
+        Serial.println(F("threshhold reset "));
+        Serial.println(threshhold);
+      #endif
+    }
+    loops = 0;
   }
 }
