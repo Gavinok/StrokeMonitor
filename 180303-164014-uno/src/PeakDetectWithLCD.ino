@@ -316,10 +316,6 @@ void loop()                     // run over and over again
         //---------------File Opened -------------------//
         if (GPSlog)
         { 
-          #ifdef Gps
-          GPSlog.print(F("Stroke Rate: "));
-          GPSlog.println(StrokeRate());
-          #endif
           PORTB &=~(1<<PORTB0); //PIN LOW
         //---------------File closed -------------------//
         }
@@ -327,10 +323,6 @@ void loop()                     // run over and over again
         {
           Serial.print(F("Stroke Rate failed "));
         }
-    #endif
-    #ifdef debug
-      Serial.print(F("Stroke Rate: "));
-      Serial.print(StrokeRate());
     #endif
 
     timer = millis(); // reset the timer
@@ -484,7 +476,7 @@ int findLowest()
   }
   return Lowest;
 }
-void resetTHreshhold();
+void resetTHreshhold()
 {
   if(loops >= loopLimit)
   {
