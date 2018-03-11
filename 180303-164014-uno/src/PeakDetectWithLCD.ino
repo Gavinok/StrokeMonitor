@@ -24,10 +24,6 @@
  *                      Z_OUT to analog 2
  *                      VCC to +5V
  *                 LED: pin 8
- * 
- *              RGBLED: pin 6
- *                      pin 9
- *                      pin 5
  *             2X16LCD: rs     1
  *                      enable 5
  *                      d4     6
@@ -52,8 +48,6 @@
 
   //use low peak detection 
   #define LowPeek
-  
-  //#define RGBLED
 
   //if using 2X16 LCD
   //#define LCD
@@ -77,19 +71,10 @@
   #define zpin  A2 
 //=======================================================//
 
-//========================RGBLED pins===================//
+//========================LCD pins===================//
 #ifdef LCD
     LiquidCrystal lcd(1, 5, 6, 7, 8, 9);
 #endif
-
-//========================RGBLED pins===================//
-#ifdef RGBLED
-  #define redpin 6
-  #define greenpin 5
-  #define bluepin 9
-  uint8_t LEDStrokes = -1;
-#endif
-//=======================================================//
 
 //=====================Loop Values=========================//
   //used to count loops before resetting the threshold
@@ -148,11 +133,6 @@
 
 void setup()  
 { 
-  #ifdef RGBLED
-    pinMode(redpin, OUTPUT);
-    pinMode(greenpin, OUTPUT);
-    pinMode(bluepin, OUTPUT);
-  #endif
 
   #ifdef LCD
     lcd.begin(16, 2); // set up the LCD's number of columns and rows:
@@ -275,43 +255,6 @@ int findLowest()
           #endif
           Strokes++;
           LowScan++;
-
-          #ifdef RGBLED
-            LEDStrokes++;
-            if(LEDStrokes == 0)
-            {
-                digitalWrite(redpin, LOW);
-                digitalWrite(greenpin, LOW);
-                digitalWrite(bluepin, LOW);
-            }
-            else
-            if(LEDStrokes > 0)
-            {
-                digitalWrite(redpin, LOW);
-                digitalWrite(greenpin, HIGH);
-                digitalWrite(bluepin, LOW);
-            }
-            if(LEDStrokes > 1)
-            {
-                digitalWrite(redpin, LOW);
-                digitalWrite(greenpin, LOW);
-                digitalWrite(bluepin, HIGH);
-            }
-            if(LEDStrokes > 2)
-            {
-                digitalWrite(redpin, HIGH);
-                digitalWrite(greenpin, LOW);
-                digitalWrite(bluepin, LOW);
-            }
-            if(LEDStrokes > 3)
-            {
-                digitalWrite(greenpin, LOW);
-                digitalWrite(redpin, LOW);
-                digitalWrite(bluepin, LOW);
-                LEDStrokes = 0;
-            }
-          #endif
-
         }
       }
     }
