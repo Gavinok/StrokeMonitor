@@ -102,7 +102,7 @@
   int threshhold = 1000;
   #define StaticChangeThreshhold 1.05 //1-2//% difference between the previous acceleration and current acceleration to indicate a peek(Lower means that the difference in acceleration when taking a stroke must be larger)
   #define StaticPercentOfThreshhold 1.2 //1-2//what % of the threshold does the previous reading need to be to indicate deceleration(lower means that the negative portion has to be lower)
-
+  int NonStrokeTimerThreshhold = 900; // this is the threshhold for how far appart a stroke must be to count.
 #endif
 //=======================================================//
 
@@ -388,7 +388,6 @@ void loop()                     // run over and over again
   #endif
   }
 }
-
 #ifdef LowPeek
   boolean LowPeekDetection()
   {
@@ -409,7 +408,7 @@ void loop()                     // run over and over again
      // #endif
 
     #endif
-    if((millis() - NonStrokeTimer > 900))
+    if((millis() - NonStrokeTimer > NonStrokeTimerThreshhold))
     {
       if ((currentaverage > oldaverage * StaticChangeThreshhold)){    // if current is greater than previous (negative slope) and old slope was negative, a local minima was reached
       #ifdef debug
