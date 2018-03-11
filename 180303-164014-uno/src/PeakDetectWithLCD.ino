@@ -136,7 +136,7 @@ int findLowest();
 boolean LowPeekDetection();
 void setup()  
 { 
-
+  analogReference(EXTERNAL);
   #ifdef LCD
     lcd.begin(16, 2); // set up the LCD's number of columns and rows:
     lcd.print(F("Gavin")); // Print a message to the LCD.
@@ -310,7 +310,6 @@ void loop()                     // run over and over again
   after approximately one second has passed collect the GPS values
   */
   if ((millis() - timer > 1000) && false) { 
-    //-------newcode start----------//
     #ifdef SDCard
       GPSlog = SD.open("GPSData.txt", FILE_WRITE); //Open file on SD card for writing
         //---------------File Opened -------------------//
