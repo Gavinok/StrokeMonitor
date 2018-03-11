@@ -443,6 +443,7 @@ void loop()                     // run over and over again
             #endif
             Strokes++;
             LowScan++;
+            NonStrokeTimer = millis();
           }
         }
       }
