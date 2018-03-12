@@ -260,7 +260,7 @@ void loop()                     // run over and over again
   #ifdef Accelerometer
 
         //if a new peek below the threshold is found add a stroke
-        #ifdef LOWPEEKDetection();
+        #ifdef LOWPEEK;
           resetTHreshhold();
         #endif
         
@@ -312,8 +312,8 @@ void loop()                     // run over and over again
 /**
  * @brief 
  * 
- * requires: NonStrokeTimer, NonStrokeTimerThreshhold, (deffined)STATIC_CHANGE_THRESHHOLD, 
- *           threshhold, LowScan, OldPositionNegative, (Deffined)lowlimit, (deffined)STATIC_PERCENT_THRESHHOLD
+ * requires: Low[], NonStrokeTimer, NonStrokeTimerThreshhold, (deffined)STATIC_CHANGE_THRESHHOLD, 
+ *           threshhold, LowScan, OldPositionNegative, (Deffined)LOOP_LIMIT, (deffined)STATIC_PERCENT_THRESHHOLD
  * 
  * @return boolean 
  */
@@ -394,7 +394,7 @@ void loop()                     // run over and over again
 #endif
 /**
  * @brief finds the lowest value in an array low scan
- * 
+ * requires: Low[], and Lowest
  * @return int lowest value in an array
  */
 int findLowest()
@@ -416,6 +416,7 @@ int findLowest()
 }
 /**
  * @brief resets the threshhold based on the lowest value it can find in the array low
+ * Requires: loops, , LOOP_LIMIT, Lowest,  MINIMUM_LOWEST, and threshhold
  * 
  */
 void resetTHreshhold()
