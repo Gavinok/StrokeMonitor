@@ -415,7 +415,7 @@ void loop()                     // run over and over again
 int findLowest()
 {
 
-  Lowest = 1000;
+  int Lowest = 1000;
   for(uint8_t scan; scan < LOOP_LIMIT; scan++)
   {
     #ifdef DEBUG
