@@ -41,10 +41,10 @@
 //#define RawAccelerometer //works perfect
 
   //if true the program will also wright values to the SD_CARD.
-  #define SD_CARD  true
+ // #define SD_CARD  true
 
   //if true the program will also wright GPS values.
-  #define GPS  true
+ // #define GPS_  true
 
   //use low peak detection 
   #define LOWPEEK
@@ -56,7 +56,7 @@
     #include <SD.h> //Load SD card library
     #include<SPI.h> //Load SPI Library
 #endif
-#ifdef GPS
+#ifdef GPS_
   #include <Adafruit_GPS.h>    //Install the adafruit GPS library
 #endif
 #include <SoftwareSerial.h> //Load the Software Serial library
@@ -86,7 +86,6 @@
   //array of low peaks used to make the threshold dynamic
   int Low[LOOP_LIMIT];
   uint8_t LowScan = 0;
-  int Lowest = 1000;
   #define MINIMUM_LOWEST 300 // Lowest values that can be considered as legit
 //=======================================================//
 
@@ -109,7 +108,7 @@
   #define CJIP_SELECT  4 
 #endif
 
-#ifdef GPS
+#ifdef GPS_
 
   SoftwareSerial mySerial(3, 2);
 
@@ -125,7 +124,7 @@
   void useInterrupt(boolean); // Func prototype keeps Arduino 0023 happy
 #endif
 
-#ifdef GPS
+#ifdef GPS_
   File GPSlog; //Data object you will write your sensor data to
 #endif
 //====================================function prototypes=========//
@@ -138,8 +137,14 @@ void setup()
   #ifdef LCD
     lcd.begin(16, 2); // set up the LCD's number of columns and rows:
     lcd.print(F("Gavin")); // Print a message to the LCD.
-     delay(1000);
+    delay(1000);
   #else
+  // connect at 115200 so we can read the GPS fast enough.
+    Serial.begin(115200);
+    Serial.println(F("Running Gavins Dope Ass Paddling Program"));
+  #endif
+
+  #ifdef GPS_
     // connect at 115200 so we can read the GPS
     // 9600 NMEA is the default baud rate for Adafruit MTK GPS's- some use 4800
     GPS.begin(9600);
@@ -160,7 +165,7 @@ void setup()
     SD.begin(CJIP_SELECT); //Initialize the SD card reader
   #endif
 }
-#ifdef GPS
+#ifdef GPS_
   // Interrupt is called once a millisecond, looks for any new GPS data, and stores it
   SIGNAL(TIMER0_COMPA_vect)
   {
@@ -175,7 +180,7 @@ void setup()
   }
 #endif
 
-#ifdef GPS
+#ifdef GPS_
   void useInterrupt(boolean v) {
     if (v) {
       // Timer0 is already used for millis() - we'll just interrupt somewhere
@@ -208,6 +213,8 @@ uint32_t NonStrokeTimer = millis();
 
 void loop()                     // run over and over again
 {
+  Serial.print("=================================== NonStrokeTimerThreshhold");
+  Serial.println(NonStrokeTimerThreshhold);
     #ifdef LCD
     if ((millis() - timer > 1000))
     {
@@ -228,7 +235,7 @@ void loop()                     // run over and over again
     Serial.print(F("strokes "));
     Serial.println(Strokes);
   #endif
-  #ifdef GPS
+  #ifdef GPS_
     // in case you are not using the interrupt above, you'll
     // need to 'hand query' the GPS, not suggested :(
     if (! usingInterrupt) {
@@ -240,7 +247,7 @@ void loop()                     // run over and over again
     }
   #endif
   // if a sentence is received, we can check the checksum, parse it...
-  #ifdef GPS
+  #ifdef GPS_
     if (GPS.newNMEAreceived()) {
       // a tricky thing here is if we print the NMEA sentence, or data
       // we end up not listening and catching other sentences! 
@@ -261,6 +268,7 @@ void loop()                     // run over and over again
 
         //if a new peek below the threshold is found add a stroke
         #ifdef LOWPEEK;
+          LOWPEEKDetection();
           resetTHreshhold();
         #endif
         
@@ -274,10 +282,10 @@ void loop()                     // run over and over again
   /* 
   after approximately one second has passed collect the GPS values
   */
-  if ((millis() - timer > 1000) && false) { 
+  /*if ((millis() - timer > 1000) && false) { 
     #ifdef SD_CARD
       GPS.fixquality); 
-  #ifdef GPS
+  #ifdef GPS_
     if (GPS.fix || true ) 
     {
       #ifdef SD_CARD
@@ -306,7 +314,7 @@ void loop()                     // run over and over again
 
     }
   #endif
-  }
+  }*/
 }
 #ifdef LOWPEEK
 /**
@@ -367,9 +375,14 @@ void loop()                     // run over and over again
             else
             {
               LowScan = 0;
+             /*  if 4 strokes have been counted the threshhold can be lowwered to half the 
+              time of the last gap. */
+              NonStrokeTimerThreshhold = ((millis() - NonStrokeTimer) * 0.5);
+              Serial.print("++++++++++++++++++++non stroke timer threshhold");
+              Serial.println(NonStrokeTimerThreshhold);
             }
             NonStrokeTimer = millis();
-
+            
           }
         }
       }
