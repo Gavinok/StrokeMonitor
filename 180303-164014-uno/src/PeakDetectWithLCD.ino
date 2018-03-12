@@ -130,7 +130,7 @@
 //====================================function prototypes=========//
 void resetTHreshhold();
 int findLowest();
-boolean LOWPEEKDetection();
+void LOWPEEKDetection();
 void setup()  
 { 
   analogReference(EXTERNAL);
@@ -217,7 +217,7 @@ void loop()                     // run over and over again
   Serial.print("=================================== NonStrokeTimerThreshhold");
   Serial.println(NonStrokeTimerThreshhold);
   #endif
-    #ifdef LCD
+  #ifdef LCD
     if ((millis() - timer > 1000))
     {
 
@@ -232,7 +232,7 @@ void loop()                     // run over and over again
       //Strokes = 0;
       timer = millis(); // reset the timer1
     }
-    #endif
+  #endif
   #ifdef DEBUG
     Serial.print(F("strokes "));
     Serial.println(Strokes);
@@ -269,7 +269,7 @@ void loop()                     // run over and over again
   #ifdef Accelerometer
 
         //if a new peek below the threshold is found add a stroke
-        #ifdef LOWPEEK;
+        #ifdef LOWPEEK
           LOWPEEKDetection();
           resetTHreshhold();
         #endif
@@ -325,9 +325,9 @@ void loop()                     // run over and over again
  * requires: Low[], NonStrokeTimer, NonStrokeTimerThreshhold, (deffined)STATIC_CHANGE_THRESHHOLD, 
  *           threshhold, LowScan, OldPositionNegative, (Deffined)LOOP_LIMIT, (deffined)STATIC_PERCENT_THRESHHOLD
  * 
- * @return boolean 
+ *  
  */
-  boolean LOWPEEKDetection()
+  void LOWPEEKDetection()
   {
     int currentaverage = 0;    // current averaged reading
     for (int scan=0; scan<= NUMBER_OF_AVERAGES; scan++){       // loop for NUMBER_OF_AVERAGES
@@ -379,7 +379,8 @@ void loop()                     // run over and over again
               LowScan = 0;
              /*  if 4 strokes have been counted the threshhold can be lowwered to half the 
               time of the last gap. */
-              NonStrokeTimerThreshhold = ((millis() - NonStrokeTimer) * 0.5);
+              if((millis() - NonStrokeTimer) < 500  && (millis() - NonStrokeTimer) < 1000)
+                          NonStrokeTimerThreshhold = ((millis() - NonStrokeTimer) * 0.5);
               Serial.print("++++++++++++++++++++non stroke timer threshhold");
               Serial.println(NonStrokeTimerThreshhold);
             }
@@ -404,7 +405,7 @@ void loop()                     // run over and over again
     }
     oldaverage = currentaverage;    // sets current values to old values
     loops++;
-    return OldPositionNegative;
+    //return OldPositionNegative;
   }
 #endif
 /**
