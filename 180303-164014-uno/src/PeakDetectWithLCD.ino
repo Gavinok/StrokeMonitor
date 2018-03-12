@@ -213,8 +213,10 @@ uint32_t NonStrokeTimer = millis();
 
 void loop()                     // run over and over again
 {
+  #ifdef DEBUG
   Serial.print("=================================== NonStrokeTimerThreshhold");
   Serial.println(NonStrokeTimerThreshhold);
+  #endif
     #ifdef LCD
     if ((millis() - timer > 1000))
     {
