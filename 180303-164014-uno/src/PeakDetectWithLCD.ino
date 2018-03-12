@@ -415,7 +415,7 @@ void loop()                     // run over and over again
 int findLowest()
 {
 
-  Lowest = 1000;
+  int Lowest = 1000;
   for(uint8_t scan; scan < LOOP_LIMIT; scan++)
   {
     #ifdef DEBUG
@@ -453,49 +453,6 @@ void resetTHreshhold()
       #endif
       threshhold = Lowest;
       #ifdef DEBUG
-        Serial.println(F("threshhold reset "));
-        Serial.println(threshhold);
-      #endif
-    }
-    loops = 0;
-  }
-}
-int findLowest()
-{
-
-  Lowest = 1000;
-  for(uint8_t scan; scan < loopLimit; scan++)
-  {
-    #ifdef debug
-      Serial.print(F("low[scan] here ........................"));
-      Serial.println(Low[scan]);
-    #endif
-    if((Lowest > Low[scan]) && !(Low[scan] ==0))
-    {
-      Lowest = Low[scan];
-    }
-  }
-  return Lowest;
-}
-void resetTHreshhold();
-{
-  if(loops >= loopLimit)
-  {
-    //sets Lowest to the lowest value in the array low[]
-    int Lowest = findLowest();
-    #ifdef debug
-      Serial.print(F("lowest "));
-      Serial.println(Lowest);
-    #endif
-    //if the new threshold is above the ThreshholdMinimum replace the threshold
-    if(Lowest > minimumLowest)
-    {
-      #ifdef debug
-          Serial.print(F("lowest "));
-          Serial.println(Lowest);
-      #endif
-      threshhold = Lowest;
-      #ifdef debug
         Serial.println(F("threshhold reset "));
         Serial.println(threshhold);
       #endif
