@@ -101,14 +101,14 @@
   int threshhold = 1000;
   #define STATIC_CHANGE_THRESHHOLD 1.05 //1-2//% difference between the previous acceleration and current acceleration to indicate a peek(Lower means that the difference in acceleration when taking a stroke must be larger)
   #define STATIC_PERCENT_THRESHHOLD 1.2 //1-2//what % of the threshold does the previous reading need to be to indicate deceleration(lower means that the negative portion has to be lower)
-  uint16_t NonStrokeTimerThreshhold = 900; // this is the threshhold for how far appart a stroke must be to count.
+  uint16_t NonStrokeTimerThreshhold = 900; // this is the threshhold for how far apart a stroke must be to count.
   uint8_t AxisPin = 69;// this is the axis used for detecting strokes 0 for x, 1 for y, 2 for z
 #endif
 //=======================================================//
 
 #ifdef SD_CARD
-  //CJIP_SELECT pin for the SD card Reader
-  #define CJIP_SELECT  4 
+  //CHIP_SELECT pin for the SD card Reader
+  #define CHIP_SELECT  4 
 #endif
 
 #ifdef GPS_
@@ -131,7 +131,7 @@
   File GPSlog; //Data object you will write your sensor data to
 #endif
 //====================================function prototypes=========//
-void resetTHreshhold();
+void resetThreshhold();
 int findLowest();
 void LOWPEEKDetection();
 uint8_t InitializeAxis();
@@ -173,7 +173,7 @@ void setup()
   #ifdef SD_CARD
     pinMode(10, OUTPUT); //Must declare 10 an output and reserve it to keep SD card happy
     DDRB |=(1<<DDB0); // led pin set to output
-    SD.begin(CJIP_SELECT); //Initialize the SD card reader
+    SD.begin(CHIP_SELECT); //Initialize the SD card reader
   #endif
 //=================Initialize axis here============
   pinMode(BUTTON_PIN, INPUT);
@@ -186,7 +186,7 @@ void setup()
   AxisPin = InitializeAxis();
   Serial.print(F("the axis is"));
   Serial.println(AxisPin);
-//==============doen initializing==================
+//==============done initializing==================
 }
 #ifdef GPS_
   // Interrupt is called once a millisecond, looks for any new GPS data, and stores it
@@ -289,7 +289,7 @@ void loop()     // run over and over again
         //if a new peek below the threshold is found add a stroke
         #ifdef LOWPEEK
           LOWPEEKDetection();
-          resetTHreshhold();
+          resetThreshhold();
         #endif
         
       #ifdef SD_CARD
@@ -401,7 +401,7 @@ void loop()     // run over and over again
             else
             {
               LowScan = 0;
-             /*  if 4 strokes have been counted the threshhold can be lowwered to half the 
+             /*  if 4 strokes have been counted the threshhold can be lowered to half the 
               time of the last gap. */
               if((millis() - NonStrokeTimer) > 600  && (millis() - NonStrokeTimer) < 2000)
                           NonStrokeTimerThreshhold = ((millis() - NonStrokeTimer) * 0.5);
@@ -462,7 +462,7 @@ int findLowest()
  * Requires: loops, , LOOP_LIMIT, Lowest,  MINIMUM_LOWEST, and threshhold
  * 
  */
-void resetTHreshhold()
+void resetThreshhold()
 {
   if(loops >= LOOP_LIMIT)
   {
@@ -530,12 +530,12 @@ uint8_t InitializeAxis()
   int dynamic[3];
   int loopsNumber = 0;
   int largestAmplitude = 0;
-  //first we let the dynamic readings stabalize
+  //first we let the dynamic readings stabilize
   while((dynamic[0] > 50) || (dynamic[1] > 50) || (dynamic[2] > 50))
   {
      ExtractDynamicValues(&loopsNumber, longterm, dynamic);
   } 
-  //secound we wait for the inticidual to start paddling
+  //second we wait for the individual to start paddling
   while((dynamic[0] < 15) || (dynamic[1] < 15) || (dynamic[2] < 15))
   {
      ExtractDynamicValues(&loopsNumber, longterm, dynamic);
