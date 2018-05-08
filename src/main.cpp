@@ -224,7 +224,7 @@ uint32_t timer = millis();
 uint32_t timer1 = millis();
 uint32_t NonStrokeTimer = millis();
 
-void loop()                     // run over and over again
+void loop()     // run over and over again
 {
   pinMode(A4, INPUT);
   #ifdef DEBUG
@@ -503,12 +503,12 @@ void ExtractDynamicValues(int *loopsNumber, long *longterm, int *dynamic)
   int currentaverage[3] = {0, 0, 0};    // current averaged reading
   for (int scan=0; scan<= NUMBER_OF_AVERAGES; scan++){       // loop for NUMBER_OF_AVERAGES
         currentaverage[0] += analogRead(XPIN);   // sum up readings assuming that the xaxis is in the same direction as the boat
-        currentaverage[1] += analogRead(YPIN);   // sum up readings assuming that the xaxis is in the same direction as the boat
-        currentaverage[2] += analogRead(ZPIN);   // sum up readings assuming that the xaxis is in the same direction as the boat
+        currentaverage[1] += analogRead(YPIN);
+        currentaverage[2] += analogRead(ZPIN);   
       }
      currentaverage[0] /= NUMBER_OF_AVERAGES;     // divide total sum by num. avg. to get average
-     currentaverage[1] /= NUMBER_OF_AVERAGES;     // divide total sum by num. avg. to get average
-     currentaverage[2] /= NUMBER_OF_AVERAGES;     // divide total sum by num. avg. to get average
+     currentaverage[1] /= NUMBER_OF_AVERAGES;     
+     currentaverage[2] /= NUMBER_OF_AVERAGES;     
      for(int i=0; i < 3; i++)
      {
        *(longterm+i) = (*(longterm+i) + (currentaverage[i]));
