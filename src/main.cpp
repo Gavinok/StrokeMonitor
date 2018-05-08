@@ -1,3 +1,4 @@
+#include <Arduino.h>
 /*
  * @CreateTime: Dec 25, 2017 9:41 PM
  * @Author: Gavin Jaeger-Freeborn
@@ -23,13 +24,14 @@
  *                      Y_OUT to analog 1
  *                      Z_OUT to analog 2
  *                      VCC to +5V
- *                 LED: pin 8
- *             2X16LCD: rs     1
+ *                 LED: digital 8
+ *             2X16LCD: rs     A3
  *                      enable 5
  *                      d4     6
  *                      d5     7
  *                      d6     8
  *                      d7     9
+ *            ButtonPin:      A4
  */
 
 //====================Important definitions================//
@@ -50,7 +52,7 @@
   #define LOWPEEK
 
   //if using 2X16 LCD
-  //#define LCD
+  #define LCD
 //=======================================================//
 #ifdef SD_CARD
     #include <SD.h> //Load SD card library
@@ -73,16 +75,16 @@
 
 //========================LCD pins===================//
 #ifdef LCD
-    LiquidCrystal lcd(1, 5, 6, 7, 8, 9);
+    LiquidCrystal lcd(A3, 5, 6, 7, 8, 9);
 #endif
-
+#define BUTTON_PIN A4
 //=====================Loop Values=========================//
   //used to count loops before resetting the threshold
   uint8_t loops = 0;
   //the limit of how many loops can occur before the threshold is reset
   #define LOOP_LIMIT 5
   //number of strokes in between writing to sd.
-  uint8_t Strokes = -1;
+  uint16_t Strokes = -1;
   //array of low peaks used to make the threshold dynamic
   int Low[LOOP_LIMIT];
   uint8_t LowScan = 0;
@@ -99,7 +101,8 @@
   int threshhold = 1000;
   #define STATIC_CHANGE_THRESHHOLD 1.05 //1-2//% difference between the previous acceleration and current acceleration to indicate a peek(Lower means that the difference in acceleration when taking a stroke must be larger)
   #define STATIC_PERCENT_THRESHHOLD 1.2 //1-2//what % of the threshold does the previous reading need to be to indicate deceleration(lower means that the negative portion has to be lower)
-  int NonStrokeTimerThreshhold = 900; // this is the threshhold for how far appart a stroke must be to count.
+  uint16_t NonStrokeTimerThreshhold = 900; // this is the threshhold for how far appart a stroke must be to count.
+  uint8_t AxisPin = 69;// this is the axis used for detecting strokes 0 for x, 1 for y, 2 for z
 #endif
 //=======================================================//
 
@@ -131,19 +134,27 @@
 void resetTHreshhold();
 int findLowest();
 void LOWPEEKDetection();
+uint8_t InitializeAxis();
+void ExtractDynamicValues(int *loopsNumber, long *longterm, int *dynamic);
+
 void setup()  
 { 
   analogReference(EXTERNAL);
   #ifdef LCD
     lcd.begin(16, 2); // set up the LCD's number of columns and rows:
-    lcd.print(F("Gavin")); // Print a message to the LCD.
+    lcd.setCursor(0, 0);
+    lcd.print(F("Running Dope Ass")); // Print a message to the LCD.
+    lcd.setCursor(0, 1);
+    lcd.print(F("Paddling Program")); // Print a message to the LCD.
     delay(1000);
   #else
   // connect at 115200 so we can read the GPS fast enough.
     Serial.begin(115200);
-    Serial.println(F("Running Gavins Dope Ass Paddling Program"));
+    Serial.println(F("Running Dope Ass Paddling Program"));
   #endif
-
+// connect at 115200 so we can read the GPS fast enough.
+    Serial.begin(115200);
+    Serial.println(F("Running Dope Ass Paddling Program"));
   #ifdef GPS_
     // connect at 115200 so we can read the GPS
     // 9600 NMEA is the default baud rate for Adafruit MTK GPS's- some use 4800
@@ -164,6 +175,18 @@ void setup()
     DDRB |=(1<<DDB0); // led pin set to output
     SD.begin(CJIP_SELECT); //Initialize the SD card reader
   #endif
+//=================Initialize axis here============
+  pinMode(BUTTON_PIN, INPUT);
+  while(!digitalRead(BUTTON_PIN))
+  {
+    digitalRead(BUTTON_PIN);
+  }
+  lcd.clear();
+  Serial.println(F("please start Paddling"));
+  AxisPin = InitializeAxis();
+  Serial.print(F("the axis is"));
+  Serial.println(AxisPin);
+//==============doen initializing==================
 }
 #ifdef GPS_
   // Interrupt is called once a millisecond, looks for any new GPS data, and stores it
@@ -196,16 +219,6 @@ void setup()
   }
 #endif
 
-#ifdef RawAccelerometer
-  void AccelerometerWright()
-  {
-    PORTB |=(1<<PORTB0); //led pin high
-    GPSlog.close();
-    //---------------File closed -------------------//
-    PORTB &=~(1<<PORTB0); //PIN LOW
-  }
-#endif
-
 //Initialize timer
 uint32_t timer = millis();
 uint32_t timer1 = millis();
@@ -213,12 +226,15 @@ uint32_t NonStrokeTimer = millis();
 
 void loop()                     // run over and over again
 {
+  pinMode(A4, INPUT);
   #ifdef DEBUG
-  Serial.print("=================================== NonStrokeTimerThreshhold");
+  Serial.print(F("=================================== LowScan"));
+  Serial.println(LowScan);
+  Serial.print(F("=================================== NonStrokeTimerThreshhold"));
   Serial.println(NonStrokeTimerThreshhold);
   #endif
   #ifdef LCD
-    if ((millis() - timer > 1000))
+   /* if ((millis() - timer > 1000))
     {
 
       #ifdef DEBUG
@@ -226,12 +242,14 @@ void loop()                     // run over and over again
       #endif
       lcd.clear(); //Clears the LCD screen and positions the cursor in the upper-left corner.
       lcd.setCursor(0, 0);
-      lcd.print("strokes "); // Print a message to the LCD.
+      lcd.print("strokes"); // Print a message to the LCD.
       lcd.setCursor(0, 1);
       lcd.print(Strokes, DEC); // Print a message to the LCD.
+      lcd.setCursor(3, 1);
+      lcd.print(AxisPin); // Print a message to the LCD.
       //Strokes = 0;
       timer = millis(); // reset the timer1
-    }
+    }*/
   #endif
   #ifdef DEBUG
     Serial.print(F("strokes "));
@@ -331,7 +349,7 @@ void loop()                     // run over and over again
   {
     int currentaverage = 0;    // current averaged reading
     for (int scan=0; scan<= NUMBER_OF_AVERAGES; scan++){       // loop for NUMBER_OF_AVERAGES
-      currentaverage += analogRead(XPIN);   // sum up readings assuming that the xaxis is in the same direction as the boat
+      currentaverage += analogRead(AxisPin);   // sum up readings assuming that the xaxis is in the same direction as the boat
     }
     currentaverage /= NUMBER_OF_AVERAGES;     // divide total sum by num. avg. to get average
     #ifdef DEBUG
@@ -352,6 +370,8 @@ void loop()                     // run over and over again
       #ifdef DEBUG
         Serial.print(F("peekdetection begin "));
         Serial.println(OldPositionNegative);
+        lcd.setCursor(8, 0);
+        lcd.print(OldPositionNegative); // Print a message to the LCD.
         Serial.print(F("Total ChangeThreshhold "));
         Serial.println(oldaverage * STATIC_CHANGE_THRESHHOLD);
       #endif
@@ -370,6 +390,10 @@ void loop()                     // run over and over again
               Serial.print(loops);
             #endif
             Strokes++;
+            lcd.setCursor(0, 0);
+            lcd.print("strokes"); // Print a message to the LCD.
+            lcd.setCursor(0, 1);
+            lcd.print(Strokes, DEC); // Print a message to the LCD.
             if(LowScan < LOOP_LIMIT - 1)
             { 
               LowScan++;
@@ -379,7 +403,7 @@ void loop()                     // run over and over again
               LowScan = 0;
              /*  if 4 strokes have been counted the threshhold can be lowwered to half the 
               time of the last gap. */
-              if((millis() - NonStrokeTimer) < 500  && (millis() - NonStrokeTimer) < 1000)
+              if((millis() - NonStrokeTimer) > 600  && (millis() - NonStrokeTimer) < 2000)
                           NonStrokeTimerThreshhold = ((millis() - NonStrokeTimer) * 0.5);
               Serial.print("++++++++++++++++++++non stroke timer threshhold");
               Serial.println(NonStrokeTimerThreshhold);
@@ -393,6 +417,9 @@ void loop()                     // run over and over again
     #ifdef DEBUG
       Serial.print(F("peekdetection end "));
       Serial.println(OldPositionNegative);
+      
+      lcd.setCursor(7, 1);
+      lcd.print(OldPositionNegative); // Print a message to the LCD.
     #endif
     if (currentaverage - oldaverage < 0){  // set old slope variable to negative if applicable
         if(OldPositionNegative == true)
@@ -406,6 +433,7 @@ void loop()                     // run over and over again
     oldaverage = currentaverage;    // sets current values to old values
     loops++;
     //return OldPositionNegative;
+    
   }
 #endif
 /**
@@ -415,7 +443,6 @@ void loop()                     // run over and over again
  */
 int findLowest()
 {
-
   int Lowest = 1000;
   for(uint8_t scan; scan < LOOP_LIMIT; scan++)
   {
@@ -460,4 +487,80 @@ void resetTHreshhold()
     }
     loops = 0;
   }
+}
+/**
+ * @brief ExtractDynamicValues simply extracts the dynamic component of acceleration 
+ *  in each direction and stores it in the provided array pointer *dynamic. 
+ *  this is done by subtracting the current accell value from the long term average.
+ * 
+ * 
+ * @param loopsNumber pointer to the number of loops in the original function
+ * @param longterm  pointer an array containing the longterm average in each axis
+ * @param dynamic pointer an array containing the dynamic acceleration in each axis
+ */
+void ExtractDynamicValues(int *loopsNumber, long *longterm, int *dynamic)
+{
+  int currentaverage[3] = {0, 0, 0};    // current averaged reading
+  for (int scan=0; scan<= NUMBER_OF_AVERAGES; scan++){       // loop for NUMBER_OF_AVERAGES
+        currentaverage[0] += analogRead(XPIN);   // sum up readings assuming that the xaxis is in the same direction as the boat
+        currentaverage[1] += analogRead(YPIN);   // sum up readings assuming that the xaxis is in the same direction as the boat
+        currentaverage[2] += analogRead(ZPIN);   // sum up readings assuming that the xaxis is in the same direction as the boat
+      }
+     currentaverage[0] /= NUMBER_OF_AVERAGES;     // divide total sum by num. avg. to get average
+     currentaverage[1] /= NUMBER_OF_AVERAGES;     // divide total sum by num. avg. to get average
+     currentaverage[2] /= NUMBER_OF_AVERAGES;     // divide total sum by num. avg. to get average
+     for(int i=0; i < 3; i++)
+     {
+       *(longterm+i) = (*(longterm+i) + (currentaverage[i]));
+       *(dynamic+i) = ((currentaverage[i]) - *(longterm+i) / *(loopsNumber));
+     }
+     
+     *loopsNumber = *loopsNumber + 1;
+}
+/**
+ * @brief  InitializeAxis determins the axis on the accelerometer to use for determining a stroke.
+ *  this is done by finding the highest dynamic values in each axis in an interval.
+ * 
+ * @return uint8_t the chosen axis on the accelerometer to use for stroke detection 0 is x, 1 is y, 2 is z,
+ */
+uint8_t InitializeAxis()
+{
+  uint8_t axis = 0;
+  long longterm[3] = {0, 0, 0};
+  int dynamic[3];
+  int loopsNumber = 0;
+  int largestAmplitude = 0;
+  //first we let the dynamic readings stabalize
+  while((dynamic[0] > 50) || (dynamic[1] > 50) || (dynamic[2] > 50))
+  {
+     ExtractDynamicValues(&loopsNumber, longterm, dynamic);
+  } 
+  //secound we wait for the inticidual to start paddling
+  while((dynamic[0] < 15) || (dynamic[1] < 15) || (dynamic[2] < 15))
+  {
+     ExtractDynamicValues(&loopsNumber, longterm, dynamic);
+  }
+  //finally we determin the axes to measure the acceleration in
+  for(int i = 0; i < 1000; i++)
+  {
+     ExtractDynamicValues(&loopsNumber, longterm, dynamic);
+     if(largestAmplitude < dynamic[0])
+      {
+        largestAmplitude = dynamic[0];
+        axis = XPIN;
+      }
+      if(largestAmplitude < dynamic[1])
+      {
+        largestAmplitude = dynamic[1];
+        axis = YPIN;
+      }
+      if(largestAmplitude < dynamic[2])
+      {
+        largestAmplitude = dynamic[2];
+        axis = ZPIN;
+      }
+  }
+  Serial.print("the axis is");
+  Serial.println(axis);
+  return axis;
 }
