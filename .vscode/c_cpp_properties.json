@@ -6,12 +6,12 @@
             "includePath": [
                 "C:/Users/gavin/.platformio/packages/framework-arduinoavr/cores/arduino",
                 "C:/Users/gavin/.platformio/packages/framework-arduinoavr/variants/standard",
-                "c:/Users/gavin/Documents/PlatformIO/Projects/GavinsStrokeMonitor/src",
+                "c:/Users/gavin/GavinsStrokeMonitor/src",
+                "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/__cores__/arduino/SPI/src",
+                "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/SD/src",
                 "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/__cores__/arduino/SoftwareSerial/src",
                 "C:/Users/gavin/.platformio/lib/Adafruit GPS Library_ID20",
-                "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/__cores__/arduino/SPI/src",
                 "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/LiquidCrystal/src",
-                "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/SD/src",
                 "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/__cores__/arduino/EEPROM/src",
                 "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/__cores__/arduino/HID/src",
                 "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/__cores__/arduino/Wire/src",
@@ -35,21 +35,20 @@
                 "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/Temboo/src",
                 "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/WiFi/src",
                 "C:/Users/gavin/.platformio/packages/tool-unity",
-                "",
-                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino"
+                ""
             ],
             "browse": {
-                "limitSymbolsToIncludedHeaders": false,
+                "limitSymbolsToIncludedHeaders": true,
                 "databaseFilename": "${workspaceRoot}/.vscode/.browse.c_cpp.db",
                 "path": [
                     "C:/Users/gavin/.platformio/packages/framework-arduinoavr/cores/arduino",
                     "C:/Users/gavin/.platformio/packages/framework-arduinoavr/variants/standard",
-                    "c:/Users/gavin/Documents/PlatformIO/Projects/GavinsStrokeMonitor/src",
+                    "c:/Users/gavin/GavinsStrokeMonitor/src",
+                    "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/__cores__/arduino/SPI/src",
+                    "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/SD/src",
                     "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/__cores__/arduino/SoftwareSerial/src",
                     "C:/Users/gavin/.platformio/lib/Adafruit GPS Library_ID20",
-                    "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/__cores__/arduino/SPI/src",
                     "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/LiquidCrystal/src",
-                    "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/SD/src",
                     "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/__cores__/arduino/EEPROM/src",
                     "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/__cores__/arduino/HID/src",
                     "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/__cores__/arduino/Wire/src",
@@ -73,8 +72,7 @@
                     "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/Temboo/src",
                     "C:/Users/gavin/.platformio/packages/framework-arduinoavr/libraries/WiFi/src",
                     "C:/Users/gavin/.platformio/packages/tool-unity",
-                    "",
-                    "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino"
+                    ""
                 ]
             },
             "defines": [
