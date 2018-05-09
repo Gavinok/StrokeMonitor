@@ -182,10 +182,12 @@ void setup()
     digitalRead(BUTTON_PIN);
   }
   lcd.clear();
-  Serial.println(F("please start Paddling"));
+  lcd.setCursor(0, 0);
+  lcd.print(F("please start Paddling"));
   AxisPin = InitializeAxis();
-  Serial.print(F("the axis is"));
-  Serial.println(AxisPin);
+  lcd.setCursor(0, 0);
+  lcd.print(F("the axis is "));
+  lcd.print(AxisPin);
 //==============done initializing==================
 }
 #ifdef GPS_
@@ -370,7 +372,7 @@ void loop()     // run over and over again
       #ifdef DEBUG
         Serial.print(F("peekdetection begin "));
         Serial.println(OldPositionNegative);
-        lcd.setCursor(8, 0);
+        lcd.setCursor(8, 1);
         lcd.print(OldPositionNegative); // Print a message to the LCD.
         Serial.print(F("Total ChangeThreshhold "));
         Serial.println(oldaverage * STATIC_CHANGE_THRESHHOLD);
@@ -390,9 +392,9 @@ void loop()     // run over and over again
               Serial.print(loops);
             #endif
             Strokes++;
-            lcd.setCursor(0, 0);
-            lcd.print("strokes"); // Print a message to the LCD.
             lcd.setCursor(0, 1);
+            lcd.print("strokes "); // Print a message to the LCD.
+            //lcd.setCursor(0, 1);
             lcd.print(Strokes, DEC); // Print a message to the LCD.
             if(LowScan < LOOP_LIMIT - 1)
             { 
