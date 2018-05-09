@@ -417,8 +417,8 @@ void loop()     // run over and over again
              /*  if 4 strokes have been counted the threshhold can be lowered to half the 
               time of the last gap. */
             if((millis() - NonStrokeTimer) > 300  && (millis() - NonStrokeTimer) < 2000)
-                          NonStrokeTimerThreshhold = ((millis() - NonStrokeTimer) * 0.5);
-              Serial.print("++++++++++++++++++++non stroke timer threshhold");
+                          NonStrokeTimerThreshhold = ((millis() - NonStrokeTimer) * 0.8);
+              Serial.print(F("++++++++++++++++++++non stroke timer threshhold"));
               Serial.println(NonStrokeTimerThreshhold);
             }
             NonStrokeTimer = millis();
