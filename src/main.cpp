@@ -137,6 +137,7 @@ void LOWPEEKDetection();
 uint8_t InitializeAxis();
 void ExtractDynamicValues(int *loopsNumber, long *longterm, int *dynamic);
 
+uint32_t NonStrokeTimer = millis();
 void setup()  
 { 
   analogReference(EXTERNAL);
@@ -183,23 +184,20 @@ void setup()
   }
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print(F("please start"));
+  lcd.print(F("Please Start"));
   lcd.setCursor(0, 1);
   lcd.print(F("Paddling"));
   AxisPin = InitializeAxis();
   lcd.setCursor(0, 0);
-  lcd.print(F("the axis is "));
+  lcd.print(F("The Axis is "));
   switch(AxisPin)
   {
-    case 16:
-      lcd.print(F("X"));
-      break;
-    case 17:
-      lcd.print(F("Y"));
-      break;
-    case 20:
-      lcd.print(F("Z"));
-      break;
+    case 16: lcd.print(F("X"));
+             break;
+    case 17: lcd.print(F("Y"));
+             break;
+    case 18: lcd.print(F("Z"));
+             break;
   }
 //==============done initializing==================
 }
@@ -237,16 +235,16 @@ void setup()
 //Initialize timer
 uint32_t timer = millis();
 uint32_t timer1 = millis();
-uint32_t NonStrokeTimer = millis();
+
 
 void loop()     // run over and over again
 {
   pinMode(A4, INPUT);
   #ifdef DEBUG
-  Serial.print(F("=================================== LowScan"));
-  Serial.println(LowScan);
-  Serial.print(F("=================================== NonStrokeTimerThreshhold"));
-  Serial.println(NonStrokeTimerThreshhold);
+    Serial.print(F("=================================== LowScan"));
+    Serial.println(LowScan);
+    Serial.print(F("=================================== NonStrokeTimerThreshhold"));
+    Serial.println(NonStrokeTimerThreshhold);
   #endif
   #ifdef LCD
    /* if ((millis() - timer > 1000))
@@ -315,7 +313,7 @@ void loop()     // run over and over again
   #endif
   
   /* 
-  after approximately one second has passed collect the GPS values
+    after approximately one second has passed collect the GPS values
   */
   /*if ((millis() - timer > 1000) && false) { 
     #ifdef SD_CARD
@@ -401,15 +399,14 @@ void loop()     // run over and over again
             Low[LowScan] = currentaverage;  //add this minima to the array of minima
             
             #ifdef DEBUG
-              Serial.println(F("loop count "));
+              Serial.println(F("oop count "));
               Serial.print(loops);
             #endif
             Strokes++;
             lcd.setCursor(0, 1);
-            lcd.print(F("strokes ")); // Print a message to the LCD.
-            //lcd.setCursor(0, 1);
+            lcd.print(F("Strokes ")); // Print a message to the LCD.
             lcd.print(Strokes, DEC); // Print a message to the LCD.
-            if(LowScan < LOOP_LIMIT - 1)
+            if(LowScan < LOOP_LIMIT - 3)
             { 
               LowScan++;
             }
@@ -418,7 +415,7 @@ void loop()     // run over and over again
               LowScan = 0;
              /*  if 4 strokes have been counted the threshhold can be lowered to half the 
               time of the last gap. */
-              if((millis() - NonStrokeTimer) > 600  && (millis() - NonStrokeTimer) < 2000)
+            if((millis() - NonStrokeTimer) > 300  && (millis() - NonStrokeTimer) < 2000)
                           NonStrokeTimerThreshhold = ((millis() - NonStrokeTimer) * 0.5);
               Serial.print("++++++++++++++++++++non stroke timer threshhold");
               Serial.println(NonStrokeTimerThreshhold);
@@ -433,7 +430,7 @@ void loop()     // run over and over again
       Serial.print(F("peekdetection end "));
       Serial.println(OldPositionNegative);
       
-      lcd.setCursor(10, 1);
+      lcd.setCursor(12, 1);
       lcd.print(OldPositionNegative); // Print a message to the LCD.
     #endif
     if (currentaverage - oldaverage < 0){  // set old slope variable to negative if applicable
@@ -556,7 +553,7 @@ uint8_t InitializeAxis()
      ExtractDynamicValues(&loopsNumber, longterm, dynamic);
   }
   //finally we determin the axes to measure the acceleration in
-  for(int i = 0; i < 1000; i++)
+  for(int i = 0; i < 500; i++)
   {
      ExtractDynamicValues(&loopsNumber, longterm, dynamic);
      if(largestAmplitude < dynamic[0])
