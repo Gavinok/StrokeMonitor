@@ -192,12 +192,13 @@ void setup()
   lcd.print(F("The Axis is "));
   switch(AxisPin)
   {
-    case 16: lcd.print(F("X"));
+    case A0: lcd.print(F("X"));
              break;
-    case 17: lcd.print(F("Y"));
+    case A1: lcd.print(F("Y"));
              break;
-    case 18: lcd.print(F("Z"));
+    case A2: lcd.print(F("Z"));
              break;
+    default: lcd.print(0);
   }
 //==============done initializing==================
 }
