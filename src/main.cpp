@@ -183,11 +183,24 @@ void setup()
   }
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print(F("please start Paddling"));
+  lcd.print(F("please start"));
+  lcd.setCursor(0, 1);
+  lcd.print(F("Paddling"));
   AxisPin = InitializeAxis();
   lcd.setCursor(0, 0);
   lcd.print(F("the axis is "));
-  lcd.print(AxisPin);
+  switch(AxisPin)
+  {
+    case 16:
+      lcd.print(F("X"));
+      break;
+    case 17:
+      lcd.print(F("Y"));
+      break;
+    case 20:
+      lcd.print(F("Z"));
+      break;
+  }
 //==============done initializing==================
 }
 #ifdef GPS_
@@ -372,7 +385,7 @@ void loop()     // run over and over again
       #ifdef DEBUG
         Serial.print(F("peekdetection begin "));
         Serial.println(OldPositionNegative);
-        lcd.setCursor(8, 1);
+        lcd.setCursor(11, 1);
         lcd.print(OldPositionNegative); // Print a message to the LCD.
         Serial.print(F("Total ChangeThreshhold "));
         Serial.println(oldaverage * STATIC_CHANGE_THRESHHOLD);
@@ -393,7 +406,7 @@ void loop()     // run over and over again
             #endif
             Strokes++;
             lcd.setCursor(0, 1);
-            lcd.print("strokes "); // Print a message to the LCD.
+            lcd.print(F("strokes ")); // Print a message to the LCD.
             //lcd.setCursor(0, 1);
             lcd.print(Strokes, DEC); // Print a message to the LCD.
             if(LowScan < LOOP_LIMIT - 1)
@@ -420,7 +433,7 @@ void loop()     // run over and over again
       Serial.print(F("peekdetection end "));
       Serial.println(OldPositionNegative);
       
-      lcd.setCursor(7, 1);
+      lcd.setCursor(10, 1);
       lcd.print(OldPositionNegative); // Print a message to the LCD.
     #endif
     if (currentaverage - oldaverage < 0){  // set old slope variable to negative if applicable
