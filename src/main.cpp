@@ -6,7 +6,7 @@
  * @Last Modified By:  Gavin Jaeger-Freeborn
  * @Last Modified Time: Dec 25, 2017 11:55 PM
  * @Description:  This code requires the installation of the Adafruit_GPS.h library for it to work
- *                This code allows the arduino device to store the time, and speed of the GPS unit
+ *                This code allows the Arduino device to store the time, and speed of the GPS unit
  *                and accelerometer values in m/s^2 to a micro SD card where the file creates under
  *                the name GPSData.TXT.
  * @Pin Layout: 
@@ -43,7 +43,7 @@
 //#define RawAccelerometer //works perfect
 
   //if true the program will also wright values to the SD_CARD.
- // #define SD_CARD  true
+  #define SD_CARD  true
 
   //if true the program will also wright GPS values.
  // #define GPS_  true
@@ -173,7 +173,7 @@ void setup()
 
   #ifdef SD_CARD
     pinMode(10, OUTPUT); //Must declare 10 an output and reserve it to keep SD card happy
-    DDRB |=(1<<DDB0); // led pin set to output
+    //DDRB |=(1<<DDB0); // led pin set to output
     SD.begin(CHIP_SELECT); //Initialize the SD card reader
   #endif
 //=================Initialize axis here============
@@ -192,13 +192,13 @@ void setup()
   lcd.print(F("The Axis is "));
   switch(AxisPin)
   {
-    case A0: lcd.print(F("X"));
+    case XPIN: lcd.print(F("X"));
              break;
-    case A1: lcd.print(F("Y"));
+    case YPIN: lcd.print(F("Y"));
              break;
-    case A2: lcd.print(F("Z"));
+    case ZPIN: lcd.print(F("Z"));
              break;
-    default: lcd.print(0);
+    default: lcd.print(F("ERROR"));
   }
 //==============done initializing==================
 }
@@ -307,6 +307,20 @@ void loop()     // run over and over again
         #endif
         
       #ifdef SD_CARD
+      if ((millis() - timer > 1000))
+      {
+        File Datalog = SD.open("GPSData.txt", FILE_WRITE); //Open file on SD card for writing
+        if (Datalog)
+        { 
+          Datalog.println(Strokes);
+          Datalog.close();
+        }else 
+        { 
+          // if the file didn't open
+          //if no longer connected to the serial monitor simply comment out the following line
+          Serial.println(F("wrighting SD Data failed!"));// replace with led
+        }
+      }
         #ifdef RawAccelerometer
           AccelerometerWright();
         #endif
@@ -573,7 +587,7 @@ uint8_t InitializeAxis()
         axis = ZPIN;
       }
   }
-  Serial.print("the axis is");
+  Serial.print(F("the axis is"));
   Serial.println(axis);
   return axis;
 }
