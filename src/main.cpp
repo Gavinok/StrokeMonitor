@@ -43,7 +43,7 @@
 //#define RawAccelerometer //works perfect
 
   //if true the program will also wright values to the SD_CARD.
-  #define SD_CARD  true
+  //#define SD_CARD  true
 
   //if true the program will also wright GPS values.
  // #define GPS_  true
@@ -99,7 +99,7 @@
   bool OldPositionNegative = false;  // sign of previous slope, true = negative
   //limits what drops in acceleration are considered the recovery phase.
   int threshhold = 1000;
-  #define STATIC_CHANGE_THRESHHOLD 1.05 //1-2//% difference between the previous acceleration and current acceleration to indicate a peek(Lower means that the difference in acceleration when taking a stroke must be larger)
+  #define STATIC_CHANGE_THRESHHOLD 1.02 //1-2//% difference between the previous acceleration and current acceleration to indicate a peek(Lower means that the difference in acceleration when taking a stroke must be larger)
   #define STATIC_PERCENT_THRESHHOLD 1.2 //1-2//what % of the threshold does the previous reading need to be to indicate deceleration(lower means that the negative portion has to be lower)
   uint16_t NonStrokeTimerThreshhold = 900; // this is the threshhold for how far apart a stroke must be to count.
   uint8_t AxisPin = 69;// this is the axis used for detecting strokes 0 for x, 1 for y, 2 for z
@@ -138,6 +138,7 @@ uint8_t InitializeAxis();
 void ExtractDynamicValues(int *loopsNumber, long *longterm, int *dynamic);
 
 uint32_t NonStrokeTimer = millis();
+uint32_t totalTimer = millis();
 void setup()  
 { 
   analogReference(EXTERNAL);
@@ -307,20 +308,25 @@ void loop()     // run over and over again
         #endif
         
       #ifdef SD_CARD
-      if ((millis() - timer > 1000))
-      {
-        File Datalog = SD.open("GPSData.txt", FILE_WRITE); //Open file on SD card for writing
-        if (Datalog)
-        { 
-          Datalog.println(Strokes);
-          Datalog.close();
-        }else 
-        { 
-          // if the file didn't open
-          //if no longer connected to the serial monitor simply comment out the following line
-          Serial.println(F("wrighting SD Data failed!"));// replace with led
+        //updates the sdcard every second.
+        if ((millis() - timer > 1000))
+        {
+          File Datalog = SD.open("GPSData.txt", FILE_WRITE); //Open file on SD card for writing
+          if (Datalog)
+          { 
+            lcd.print("tru");
+            Datalog.println(millis() - totalTimer); // print the total time
+            Datalog.println(Strokes); // print the total Strokes
+            Datalog.close();
+            
+          }else 
+          { 
+            // if the file didn't open
+            //if no longer connected to the serial monitor simply comment out the following line
+            lcd.print(F("wrighting SD Data failed!"));// replace with led
+          }
+          timer = millis();
         }
-      }
         #ifdef RawAccelerometer
           AccelerometerWright();
         #endif
@@ -392,10 +398,11 @@ void loop()     // run over and over again
      // #endif
 
     #endif
-    if((millis() - NonStrokeTimer > NonStrokeTimerThreshhold))
+    if(millis() - NonStrokeTimer > 2000)
     {
-      if ((currentaverage > oldaverage * STATIC_CHANGE_THRESHHOLD)){    // if current is greater than previous (negative slope) and old slope was negative, a local minima was reached
-      #ifdef DEBUG
+      NonStrokeTimerThreshhold = 700;
+    }
+    #ifdef DEBUG
         Serial.print(F("peekdetection begin "));
         Serial.println(OldPositionNegative);
         lcd.setCursor(11, 1);
@@ -403,6 +410,9 @@ void loop()     // run over and over again
         Serial.print(F("Total ChangeThreshhold "));
         Serial.println(oldaverage * STATIC_CHANGE_THRESHHOLD);
       #endif
+    if((millis() - NonStrokeTimer > NonStrokeTimerThreshhold))
+    {
+      if ((currentaverage > oldaverage * STATIC_CHANGE_THRESHHOLD)){    // if current is greater than previous (negative slope) and old slope was negative, a local minima was reached
         if(OldPositionNegative == false){
           if(oldaverage < (threshhold * STATIC_PERCENT_THRESHHOLD)){
             // local minima value, do stuff here
@@ -413,10 +423,10 @@ void loop()     // run over and over again
             OldPositionNegative = true;      // the if statement already checked for positive slope, so it makes sense to set the value for the next pass here
             Low[LowScan] = currentaverage;  //add this minima to the array of minima
             
-            #ifdef DEBUG
+            /* #ifdef DEBUG
               Serial.println(F("oop count "));
               Serial.print(loops);
-            #endif
+            #endif */
             Strokes++;
             lcd.setCursor(0, 1);
             lcd.print(F("Strokes ")); // Print a message to the LCD.
@@ -430,8 +440,8 @@ void loop()     // run over and over again
               LowScan = 0;
              /*  if 4 strokes have been counted the threshhold can be lowered to half the 
               time of the last gap. */
-            if((millis() - NonStrokeTimer) > 300  && (millis() - NonStrokeTimer) < 2000)
-                          NonStrokeTimerThreshhold = ((millis() - NonStrokeTimer) * 0.8);
+            if((millis() - NonStrokeTimer) > 500  && (millis() - NonStrokeTimer) < 2000)
+                          NonStrokeTimerThreshhold = ((millis() - NonStrokeTimer) * 0.7);
               Serial.print(F("++++++++++++++++++++non stroke timer threshhold"));
               Serial.println(NonStrokeTimerThreshhold);
             }
@@ -535,7 +545,8 @@ void ExtractDynamicValues(int *loopsNumber, long *longterm, int *dynamic)
       }
      currentaverage[0] /= NUMBER_OF_AVERAGES;     // divide total sum by num. avg. to get average
      currentaverage[1] /= NUMBER_OF_AVERAGES;     
-     currentaverage[2] /= NUMBER_OF_AVERAGES;     
+     currentaverage[2] /= NUMBER_OF_AVERAGES;
+          
      for(int i=0; i < 3; i++)
      {
        *(longterm+i) = (*(longterm+i) + (currentaverage[i]));
@@ -562,26 +573,33 @@ uint8_t InitializeAxis()
   {
      ExtractDynamicValues(&loopsNumber, longterm, dynamic);
   } 
+  
   //second we wait for the individual to start paddling
-  while((dynamic[0] < 15) || (dynamic[1] < 15) || (dynamic[2] < 15))
+  while((dynamic[0] < 5) || (dynamic[1] < 5) || (dynamic[2] < 5))
   {
      ExtractDynamicValues(&loopsNumber, longterm, dynamic);
   }
+  lcd.print("pass");
   //finally we determin the axes to measure the acceleration in
   for(int i = 0; i < 500; i++)
   {
      ExtractDynamicValues(&loopsNumber, longterm, dynamic);
-     if(largestAmplitude < dynamic[0])
+     //if it has the largest delta but is not the highest in total(that is from gravity)
+    /*  Serial.println(longterm[0]);
+     Serial.println(longterm[1]);
+     Serial.println(longterm[2]);
+     Serial.println(); */
+     if((largestAmplitude < dynamic[0]) && !((longterm[0] > longterm[2]) && (longterm[0] > longterm[1])))
       {
         largestAmplitude = dynamic[0];
         axis = XPIN;
       }
-      if(largestAmplitude < dynamic[1])
+      if((largestAmplitude < dynamic[1]) && !((longterm[1] > longterm[2]) && (longterm[1] > longterm[0])))
       {
         largestAmplitude = dynamic[1];
         axis = YPIN;
       }
-      if(largestAmplitude < dynamic[2])
+      if((largestAmplitude < dynamic[2]) && !((longterm[2] > longterm[0]) && (longterm[2] > longterm[1])))
       {
         largestAmplitude = dynamic[2];
         axis = ZPIN;
