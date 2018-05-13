@@ -35,7 +35,7 @@
  */
 
 //====================Important definitions================//
-  #define DEBUG
+  //#define DEBUG
   //if true the program will also read accelerometer values.
   #define Accelerometer  true
 
@@ -94,7 +94,7 @@
 //=================LOWPEEKDetection Thresholds and Values===========================//
 #ifdef LOWPEEK
 
-  #define NUMBER_OF_AVERAGES 5  // number of averages to take (removes noise)
+  #define NUMBER_OF_AVERAGES 6  // number of averages to take (removes noise)
   int oldaverage = 0; // previous averaged reading
   bool OldPositionNegative = false;  // sign of previous slope, true = negative
   //limits what drops in acceleration are considered the recovery phase.
@@ -190,7 +190,7 @@ void setup()
   lcd.print(F("Paddling"));
   AxisPin = InitializeAxis();
   lcd.setCursor(0, 0);
-  lcd.print(F("The Axis is "));
+  /* lcd.print(F("The Axis is "));
   switch(AxisPin)
   {
     case XPIN: lcd.print(F("X"));
@@ -200,7 +200,7 @@ void setup()
     case ZPIN: lcd.print(F("Z"));
              break;
     default: lcd.print(F("ERROR"));
-  }
+  } */
 //==============done initializing==================
 }
 #ifdef GPS_
@@ -237,6 +237,16 @@ void setup()
 //Initialize timer
 uint32_t timer = millis();
 uint32_t timer1 = millis();
+uint32_t StrokeRateTimer = millis();
+
+float Stroke_Rate()
+{
+  Serial.println(Strokes);
+  Serial.print("+++++++++++++++++++++++Time");
+  Serial.println((millis() - StrokeRateTimer)/1000);
+  float StrokeRate = (Strokes/((millis() - StrokeRateTimer)/1000));
+  return StrokeRate;
+}
 
 
 void loop()     // run over and over again
@@ -305,6 +315,9 @@ void loop()     // run over and over again
         #ifdef LOWPEEK
           LOWPEEKDetection();
           resetThreshhold();
+          lcd.setCursor(0, 0);
+          lcd.print("Stroke Rate ");
+          lcd.print(Stroke_Rate());
         #endif
         
       #ifdef SD_CARD
@@ -438,7 +451,7 @@ void loop()     // run over and over again
             else
             {
               LowScan = 0;
-             /*  if 4 strokes have been counted the threshhold can be lowered to half the 
+             /*  if 2 strokes have been counted the threshhold can be lowered to half the 
               time of the last gap. */
             if((millis() - NonStrokeTimer) > 500  && (millis() - NonStrokeTimer) < 2000)
                           NonStrokeTimerThreshhold = ((millis() - NonStrokeTimer) * 0.7);
