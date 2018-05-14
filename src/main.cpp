@@ -239,7 +239,7 @@ uint32_t timer = millis();
 uint32_t timer1 = millis();
 uint32_t StrokeRateTimer = millis();
 
-float Stroke_Rate()
+float Stroke_Rate(int Strokes, uint32_t StrokeRateTimer)
 {
   Serial.println(Strokes);
   Serial.print("+++++++++++++++++++++++Time");
@@ -317,7 +317,7 @@ void loop()     // run over and over again
           resetThreshhold();
           lcd.setCursor(0, 0);
           lcd.print("Stroke Rate ");
-          lcd.print(Stroke_Rate());
+          lcd.print(Stroke_Rate(Strokes, StrokeRateTimer));
         #endif
         
       #ifdef SD_CARD
@@ -383,6 +383,15 @@ void loop()     // run over and over again
   #endif
   }*/
 }
+int getAverageReading(uint8_t Axispin, int Averaging_Interval)
+{
+  int average = 0;    // current averaged reading
+    for (int scan=0; scan<= Averaging_Interval; scan++){       // loop for NUMBER_OF_AVERAGES
+      average += analogRead(AxisPin);   // sum up readings assuming that the xaxis is in the same direction as the boat
+    }
+    average /= Averaging_Interval;     // divide total sum by num. avg. to get average
+    return average;
+}
 #ifdef LOWPEEK
 /**
  * @brief 
@@ -394,11 +403,8 @@ void loop()     // run over and over again
  */
   void LOWPEEKDetection()
   {
-    int currentaverage = 0;    // current averaged reading
-    for (int scan=0; scan<= NUMBER_OF_AVERAGES; scan++){       // loop for NUMBER_OF_AVERAGES
-      currentaverage += analogRead(AxisPin);   // sum up readings assuming that the xaxis is in the same direction as the boat
-    }
-    currentaverage /= NUMBER_OF_AVERAGES;     // divide total sum by num. avg. to get average
+    
+    int currentaverage = getAverageReading(AxisPin, NUMBER_OF_AVERAGES);    // current averaged reading
     #ifdef DEBUG
       Serial.print(F("currentaverage "));
       Serial.println(currentaverage);
