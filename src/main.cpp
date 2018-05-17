@@ -243,8 +243,8 @@ float Stroke_Rate()
 {
   Serial.println(Strokes);
   Serial.print("+++++++++++++++++++++++Time");
-  Serial.println((millis() - StrokeRateTimer)/1000);
-  float StrokeRate = (Strokes/((millis() - StrokeRateTimer)/1000));
+  Serial.println((millis() - StrokeRateTimer)/60000);
+  float StrokeRate = (Strokes/((millis() - StrokeRateTimer)/60000));
   return StrokeRate;
 }
 
