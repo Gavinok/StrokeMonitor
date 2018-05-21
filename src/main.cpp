@@ -392,6 +392,41 @@ int getAverageReading(uint8_t Axispin, int Averaging_Interval)
     average /= Averaging_Interval;     // divide total sum by num. avg. to get average
     return average;
 }
+//replace OldPositionNegative with the state mechine
+//when it returns true continue with low peek detect 
+bool isMinima(int m_currentaverage, int m_oldaverage,int m_threshhold,bool m_OldPositionNegative)
+{
+  if ((m_currentaverage > m_oldaverage * STATIC_CHANGE_THRESHHOLD)){    // if current is greater than previous (negative slope) and old slope was negative, a local minima was reached
+        if(m_OldPositionNegative == false){
+          if(m_oldaverage < (m_threshhold * STATIC_PERCENT_THRESHHOLD)){
+            return true;
+          }
+        }
+  }
+  return false;
+}
+bool StrokeDetected(uint16_t* m_Strokes)
+{
+              //++++++++++++++++++++++++++++++++++++++++++++++++start of Increment
+            // local minima value, do stuff here
+            #ifdef DEBUG
+                Serial.print(F("TotalThreshhold "));
+                Serial.println(threshhold * STATIC_PERCENT_THRESHHOLD);
+            #endif
+           // OldPositionNegative = true;      // the if statement already checked for positive slope, so it makes sense to set the value for the next pass here
+            
+            
+            /* #ifdef DEBUG
+              Serial.println(F("oop count "));
+              Serial.print(loops);
+            #endif */
+            Strokes++;
+            lcd.setCursor(0, 1);
+            lcd.print(F("Strokes ")); // Print a message to the LCD.
+            lcd.print(Strokes, DEC); // Print a message to the LCD. 
+            //+++++++++++++++++++++++++++++++++++++++++++++++++++++++end of Increment
+            return true;
+}
 #ifdef LOWPEEK
 /**
  * @brief 
@@ -401,6 +436,7 @@ int getAverageReading(uint8_t Axispin, int Averaging_Interval)
  * 
  *  
  */
+
   void LOWPEEKDetection()
   {
     
@@ -431,25 +467,21 @@ int getAverageReading(uint8_t Axispin, int Averaging_Interval)
       #endif
     if((millis() - NonStrokeTimer > NonStrokeTimerThreshhold))
     {
-      if ((currentaverage > oldaverage * STATIC_CHANGE_THRESHHOLD)){    // if current is greater than previous (negative slope) and old slope was negative, a local minima was reached
-        if(OldPositionNegative == false){
-          if(oldaverage < (threshhold * STATIC_PERCENT_THRESHHOLD)){
+      if (isMinima(currentaverage, oldaverage, threshhold, OldPositionNegative)){
+            //++++++++++++++++++++++++++++++++++++++++++++++++start of Increment
             // local minima value, do stuff here
             #ifdef DEBUG
                 Serial.print(F("TotalThreshhold "));
                 Serial.println(threshhold * STATIC_PERCENT_THRESHHOLD);
             #endif
-            OldPositionNegative = true;      // the if statement already checked for positive slope, so it makes sense to set the value for the next pass here
-            Low[LowScan] = currentaverage;  //add this minima to the array of minima
-            
-            /* #ifdef DEBUG
-              Serial.println(F("oop count "));
-              Serial.print(loops);
-            #endif */
+            /* OldPositionNegative = true;      // the if statement already checked for positive slope, so it makes sense to set the value for the next pass here
             Strokes++;
             lcd.setCursor(0, 1);
             lcd.print(F("Strokes ")); // Print a message to the LCD.
-            lcd.print(Strokes, DEC); // Print a message to the LCD.
+            lcd.print(Strokes, DEC); // Print a message to the LCD.  */
+            //+++++++++++++++++++++++++++++++++++++++++++++++++++++++end of Increment
+            OldPositionNegative = StrokeDetected(&Strokes);
+            Low[LowScan] = currentaverage;  //add this minima to the array of minima
             if(LowScan < LOOP_LIMIT - 3)
             { 
               LowScan++;
@@ -465,9 +497,7 @@ int getAverageReading(uint8_t Axispin, int Averaging_Interval)
               Serial.println(NonStrokeTimerThreshhold);
             }
             NonStrokeTimer = millis();
-            
-          }
-        }
+           
       }
     }
     #ifdef DEBUG
