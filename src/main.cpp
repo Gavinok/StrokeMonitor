@@ -105,6 +105,10 @@
   uint8_t AxisPin = 69;// this is the axis used for detecting strokes 0 for x, 1 for y, 2 for z
 #endif
 //=======================================================//
+#ifdef STROKE_RATE
+  int Stroke_Rate_Strokes = -1;
+  uint32_t StrokeRateTimer = millis();
+#endif
 
 #ifdef SD_CARD
   //CHIP_SELECT pin for the SD card Reader
