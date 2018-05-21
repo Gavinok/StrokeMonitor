@@ -318,6 +318,15 @@ void loop()     // run over and over again
           lcd.setCursor(0, 0);
           lcd.print("Stroke Rate ");
           lcd.print(Stroke_Rate(Strokes, StrokeRateTimer));
+          #ifdef STROKE_RATE
+          if(millis() - StrokeRateTimer > 5000)
+          {
+            lcd.setCursor(0, 0);
+            lcd.print("Stroke Rate ");
+            lcd.print(Stroke_Rate());
+            StrokeRateTimer = millis();
+          }
+          #endif
         #endif
         
       #ifdef SD_CARD
