@@ -37,8 +37,8 @@
 //====================Important definitions================//
   //#define DEBUG
   //if true the program will also read accelerometer values.
-  #define Accelerometer  true
-
+  #define Accelerometer  
+  #define STROKE_RATE
   //prints raw accelerometer values to sd card ans serial
 //#define RawAccelerometer //works perfect
 
@@ -105,6 +105,10 @@
   uint8_t AxisPin = 69;// this is the axis used for detecting strokes 0 for x, 1 for y, 2 for z
 #endif
 //=======================================================//
+#ifdef STROKE_RATE
+  int Stroke_Rate_Strokes;
+  uint32_t StrokeRateTimer = millis();
+#endif
 
 #ifdef SD_CARD
   //CHIP_SELECT pin for the SD card Reader
@@ -237,17 +241,19 @@ void setup()
 //Initialize timer
 uint32_t timer = millis();
 uint32_t timer1 = millis();
-uint32_t StrokeRateTimer = millis();
 
+#ifdef STROKE_RATE
 float Stroke_Rate()
 {
-  Serial.println(Strokes);
+  float test = Stroke_Rate_Strokes/10;
+  Serial.println(test);
   Serial.print("+++++++++++++++++++++++Time");
-  Serial.println((millis() - StrokeRateTimer)/60000);
-  float StrokeRate = (Strokes/((millis() - StrokeRateTimer)/60000));
+  Serial.println(Stroke_Rate_Strokes);
+  float StrokeRate = ((Stroke_Rate_Strokes/10)*6);
+  Stroke_Rate_Strokes = 0;
   return StrokeRate;
 }
-
+#endif
 
 void loop()     // run over and over again
 {
@@ -315,9 +321,16 @@ void loop()     // run over and over again
         #ifdef LOWPEEK
           LOWPEEKDetection();
           resetThreshhold();
-          lcd.setCursor(0, 0);
-          lcd.print("Stroke Rate ");
-          lcd.print(Stroke_Rate());
+          #ifdef STROKE_RATE
+          if(millis() - StrokeRateTimer > 10000)
+          {
+            Serial.println(millis() - StrokeRateTimer > 10000);
+            lcd.setCursor(0, 0);
+            lcd.print("Stroke Rate ");
+            lcd.print(Stroke_Rate());
+            StrokeRateTimer = millis();
+          }
+          #endif
         #endif
         
       #ifdef SD_CARD
@@ -441,6 +454,7 @@ void loop()     // run over and over again
               Serial.print(loops);
             #endif */
             Strokes++;
+            Stroke_Rate_Strokes++;
             lcd.setCursor(0, 1);
             lcd.print(F("Strokes ")); // Print a message to the LCD.
             lcd.print(Strokes, DEC); // Print a message to the LCD.
