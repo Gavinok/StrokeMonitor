@@ -37,8 +37,8 @@
 //====================Important definitions================//
   //#define DEBUG
   //if true the program will also read accelerometer values.
-  #define Accelerometer  true
-
+  #define Accelerometer 
+  #define STROKE_RATE
   //prints raw accelerometer values to sd card ans serial
 //#define RawAccelerometer //works perfect
 
@@ -440,6 +440,14 @@ bool StrokeDetected(uint16_t* m_Strokes)
             //+++++++++++++++++++++++++++++++++++++++++++++++++++++++end of Increment
             return true;
 }
+#ifdef STROKE_RATE
+  float Stroke_Rate()
+  {
+    float StrokeRate = ((Stroke_Rate_Strokes/5.0)*60.0);
+    Stroke_Rate_Strokes = 0;
+    return StrokeRate;
+  }
+#endif
 #ifdef LOWPEEK
 /**
  * @brief 
