@@ -691,8 +691,7 @@ uint8_t InitializeAxis()
   while((dynamic[0] > 50) || (dynamic[1] > 50) || (dynamic[2] > 50))
   {
      ExtractDynamicValues(&loopsNumber, longterm, dynamic);
-  } 
-  
+  }
   //second we wait for the individual to start paddling
   while((dynamic[0] < 5) || (dynamic[1] < 5) || (dynamic[2] < 5))
   {
@@ -720,6 +719,7 @@ uint8_t InitializeAxis()
         axis = ZPIN;
       }
   }
+  lcd.clear();
   Serial.print(F("the axis is"));
   Serial.println(axis);
   return axis;
@@ -742,7 +742,7 @@ int ReadAxis(int axisPin, const int sampleSize)
 //
 void AutoCalibrate(int xRaw, int yRaw, int zRaw)
 {
-  Serial.println("Calibrate");
+  Serial.println(F("Calibrate"));
   if (xRaw < xRawMin)
   {
     xRawMin = xRaw;
@@ -751,7 +751,6 @@ void AutoCalibrate(int xRaw, int yRaw, int zRaw)
   {
     xRawMax = xRaw;
   }
-  
   if (yRaw < yRawMin)
   {
     yRawMin = yRaw;
@@ -759,8 +758,7 @@ void AutoCalibrate(int xRaw, int yRaw, int zRaw)
   if (yRaw > yRawMax)
   {
     yRawMax = yRaw;
-  }
- 
+  } 
   if (zRaw < zRawMin)
   {
     zRawMin = zRaw;
