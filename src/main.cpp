@@ -63,6 +63,7 @@
 #endif
 #include <SoftwareSerial.h> //Load the Software Serial library
 #include <LiquidCrystal.h>// include the library code
+#include <EEPROM.h> // used for storing accel constents
 //========================Accelerometer pins=================//
   //we are assuming the x axis is in the same direction as the boat
   // x-axis of the accelerometer
@@ -71,6 +72,16 @@
   #define YPIN  A1
   // z-axis of the accelerometer
   #define ZPIN  A2 
+
+  //for scaling
+int xRawMin = 512;
+int xRawMax = 512;
+ 
+int yRawMin = 512;
+int yRawMax = 512;
+ 
+int zRawMin = 512;
+int zRawMax = 512;
 //=======================================================//
 
 //========================LCD pins===================//
@@ -144,12 +155,28 @@ float Stroke_Rate();
 bool StrokeDetected(uint16_t* m_Strokes, int currentaverage);
 bool isMinima(int m_currentaverage, int m_oldaverage,int m_threshhold,bool m_OldPositionNegative);
 int getAverageReading(uint8_t Axispin, int Averaging_Interval);
+void CalabrateAccel();
+float readScaledAccel(int axisPin);
+void store_Accell_Constents_To_EEPROM();
+bool get_Accell_Constents_To_EEPROM();
 
 uint32_t NonStrokeTimer = millis();
 uint32_t totalTimer = millis();
+
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++setup
 void setup()  
 { 
+  // connect at 115200 so we can read the GPS fast enough.
+    Serial.begin(115200);
+    Serial.println(F("Running Dope Ass Paddling Program"));
+
   analogReference(EXTERNAL);
+  if(!get_Accell_Constents_To_EEPROM())
+  {
+    CalabrateAccel();
+    store_Accell_Constents_To_EEPROM();
+  }
   #ifdef LCD
     lcd.begin(16, 2); // set up the LCD's number of columns and rows:
     lcd.setCursor(0, 0);
@@ -162,9 +189,7 @@ void setup()
     Serial.begin(115200);
     Serial.println(F("Running Dope Ass Paddling Program"));
   #endif
-// connect at 115200 so we can read the GPS fast enough.
-    Serial.begin(115200);
-    Serial.println(F("Running Dope Ass Paddling Program"));
+
   #ifdef GPS_
     // connect at 115200 so we can read the GPS
     // 9600 NMEA is the default baud rate for Adafruit MTK GPS's- some use 4800
@@ -390,7 +415,7 @@ int getAverageReading(uint8_t Axispin, int Averaging_Interval)
 {
   int average = 0;    // current averaged reading
     for (int scan=0; scan<= Averaging_Interval; scan++){       // loop for NUMBER_OF_AVERAGES
-      average += analogRead(AxisPin);   // sum up readings assuming that the xaxis is in the same direction as the boat
+      average += readScaledAccel(Axispin);   // sum up readings assuming that the xaxis is in the same direction as the boat
     }
     average /= Averaging_Interval;     // divide total sum by num. avg. to get average
     return average;
@@ -679,10 +704,6 @@ uint8_t InitializeAxis()
   {
      ExtractDynamicValues(&loopsNumber, longterm, dynamic);
      //if it has the largest delta but is not the highest in total(that is from gravity)
-    /*  Serial.println(longterm[0]);
-     Serial.println(longterm[1]);
-     Serial.println(longterm[2]);
-     Serial.println(); */
      if((largestAmplitude < dynamic[0]) && !((longterm[0] > longterm[2]) && (longterm[0] > longterm[1])))
       {
         largestAmplitude = dynamic[0];
@@ -702,4 +723,207 @@ uint8_t InitializeAxis()
   Serial.print(F("the axis is"));
   Serial.println(axis);
   return axis;
+}
+
+int ReadAxis(int axisPin, const int sampleSize)
+{
+  long reading = 0;
+  analogRead(axisPin);
+  delay(1);
+  for (int i = 0; i < sampleSize; i++)
+  {
+    reading += analogRead(axisPin);
+  }
+  return reading/sampleSize;
+}
+
+//
+// Find the extreme raw readings from each axis
+//
+void AutoCalibrate(int xRaw, int yRaw, int zRaw)
+{
+  Serial.println("Calibrate");
+  if (xRaw < xRawMin)
+  {
+    xRawMin = xRaw;
+  }
+  if (xRaw > xRawMax)
+  {
+    xRawMax = xRaw;
+  }
+  
+  if (yRaw < yRawMin)
+  {
+    yRawMin = yRaw;
+  }
+  if (yRaw > yRawMax)
+  {
+    yRawMax = yRaw;
+  }
+ 
+  if (zRaw < zRawMin)
+  {
+    zRawMin = zRaw;
+  }
+  if (zRaw > zRawMax)
+  {
+    zRawMax = zRaw;
+  }
+}
+
+void CalabrateAccel()
+{
+ 
+// Raw Ranges:
+// initialize to mid-range and allow calibration to
+// find the minimum and maximum for each axis
+ 
+// Take multiple samples to reduce noise
+const int sampleSize = 10;
+ 
+  analogReference(EXTERNAL);
+  Serial.begin(9600);
+  int step = 0;
+  bool next = false;
+  while(true)
+  {
+    int xRaw = ReadAxis(XPIN, sampleSize);
+    int yRaw = ReadAxis(YPIN, sampleSize);
+    int zRaw = ReadAxis(ZPIN, sampleSize);
+    
+    if (digitalRead(BUTTON_PIN) == HIGH)
+    {
+      AutoCalibrate(xRaw, yRaw, zRaw);
+      next = true;
+    }
+    else
+    {
+      if(next)
+      {
+        step++;
+        next = false;
+      }
+      switch(step)
+      {
+        case 0:
+        Serial.println("place on right side and hold button");
+        break;
+
+        case 1:
+        Serial.println("place on left side and hold button");
+        break;
+
+        case 2:
+        Serial.println("place on front side and hold button");
+        break;
+
+        case 3:
+        Serial.println("place on back side and hold button");
+        break;
+
+        case 4:
+        Serial.println("place screen facing up and hold button");
+        break;
+
+        case 5:
+        Serial.println("place screen facing down and hold button");
+        break;
+      }
+      if(step == 6)
+      {
+        break;
+      }    
+    delay(500);
+    }
+  }
+}
+//
+// Read "sampleSize" samples and report the average
+//
+
+float readScaledAccel(int axisPin)
+{
+  long Scaled;
+  float Accel;
+  // Convert raw values to 'milli-Gs"
+  switch(axisPin)
+  {
+    case XPIN:
+      Scaled = map(analogRead(axisPin), xRawMin, xRawMax, -1000, 1000);
+      Accel = Scaled / 1000.0;
+      return Accel;
+
+    case YPIN:
+      Scaled = map(analogRead(axisPin), yRawMin, yRawMax, -1000, 1000);
+      Accel = Scaled / 1000.0;
+      return Accel;
+
+    case ZPIN:
+      Scaled = map(analogRead(axisPin), zRawMin, zRawMax, -1000, 1000);
+      Accel = Scaled / 1000.0;
+      return Accel;
+  }
+}
+void store_Accell_Constents_To_EEPROM()
+{
+  bool Callabrated = true;
+  int address = 0;
+  EEPROM.put(address, Callabrated);
+  address+= 3;
+  EEPROM.put(address, xRawMin);
+  Serial.print("xRawMin");
+  Serial.println(xRawMin);
+  address+= 3;
+  EEPROM.put(address, xRawMax);
+  Serial.print("xRawMax");
+  Serial.println(xRawMax);
+  address+= 3;
+  EEPROM.put(address, yRawMin);
+  Serial.print("yRawMin");
+  Serial.println(yRawMin);
+  address+= 3;
+  EEPROM.put(address, yRawMax);
+  Serial.print("yRawMax");
+  Serial.println(yRawMax);
+  address+= 3;
+  EEPROM.put(address, zRawMin);
+  Serial.print("zRawMin");
+  Serial.println(zRawMin);
+  address+= 3;
+  EEPROM.put(address, zRawMax);
+  Serial.print("zRawMax");
+  Serial.println(zRawMax);
+}
+bool get_Accell_Constents_To_EEPROM()
+{
+  bool Callabrated = false;
+  int address = 0;
+  EEPROM.get(address, Callabrated);
+  Serial.print("Callabrated");
+  Serial.println(Callabrated);
+  address+= 3;
+  EEPROM.get(address, xRawMin);
+  Serial.print("xRawMin");
+  Serial.println(xRawMin);
+  address+= 3;
+  EEPROM.get(address, xRawMax);
+  Serial.print("xRawMax");
+  Serial.println(xRawMax);
+  address+= 3;
+  EEPROM.get(address, yRawMin);
+  Serial.print("xRawMin");
+  Serial.println(xRawMin);
+  address+= 3;
+  EEPROM.get(address, yRawMax);
+  Serial.print("xRawMin");
+  Serial.println(xRawMin);
+  address+= 3;
+  EEPROM.get(address, zRawMin);
+  Serial.print("xRawMin");
+  Serial.println(xRawMin);
+  address+= 3;
+  EEPROM.get(address, zRawMax);
+  Serial.print("xRawMin");
+  Serial.println(xRawMin);
+  return Callabrated;
 }
