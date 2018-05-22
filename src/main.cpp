@@ -91,7 +91,7 @@
   #define MINIMUM_LOWEST 300 // Lowest values that can be considered as legit
 //=======================================================//
 
-//=================LOWPEEKDetection Thresholds and Values===========================//
+//=================StrokeDetection Thresholds and Values===========================//
 #ifdef LOWPEEK
 
   #define NUMBER_OF_AVERAGES 6  // number of averages to take (removes noise)
@@ -99,7 +99,7 @@
   bool OldPositionNegative = false;  // sign of previous slope, true = negative
   //limits what drops in acceleration are considered the recovery phase.
   int threshhold = 1000;
-  #define STATIC_CHANGE_THRESHHOLD 1.02 //1-2//% difference between the previous acceleration and current acceleration to indicate a peek(Lower means that the difference in acceleration when taking a stroke must be larger)
+  #define STATIC_CHANGE_THRESHHOLD 1.005 //1-2//% difference between the previous acceleration and current acceleration to indicate a peek(Lower means that the difference in acceleration when taking a stroke must be larger)
   #define STATIC_PERCENT_THRESHHOLD 1.2 //1-2//what % of the threshold does the previous reading need to be to indicate deceleration(lower means that the negative portion has to be lower)
   uint16_t NonStrokeTimerThreshhold = 900; // this is the threshhold for how far apart a stroke must be to count.
   uint8_t AxisPin = 69;// this is the axis used for detecting strokes 0 for x, 1 for y, 2 for z
@@ -137,9 +137,13 @@
 //====================================function prototypes=========//
 void resetThreshhold();
 int findLowest();
-void LOWPEEKDetection();
+void StrokeDetection();
 uint8_t InitializeAxis();
 void ExtractDynamicValues(int *loopsNumber, long *longterm, int *dynamic);
+float Stroke_Rate();
+bool StrokeDetected(uint16_t* m_Strokes, int currentaverage);
+bool isMinima(int m_currentaverage, int m_oldaverage,int m_threshhold,bool m_OldPositionNegative);
+int getAverageReading(uint8_t Axispin, int Averaging_Interval);
 
 uint32_t NonStrokeTimer = millis();
 uint32_t totalTimer = millis();
@@ -241,17 +245,6 @@ void setup()
 //Initialize timer
 uint32_t timer = millis();
 uint32_t timer1 = millis();
-uint32_t StrokeRateTimer = millis();
-
-float Stroke_Rate(int Strokes, uint32_t StrokeRateTimer)
-{
-  Serial.println(Strokes);
-  Serial.print("+++++++++++++++++++++++Time");
-  Serial.println((millis() - StrokeRateTimer)/1000);
-  float StrokeRate = (Strokes/((millis() - StrokeRateTimer)/1000));
-  return StrokeRate;
-}
-
 
 void loop()     // run over and over again
 {
@@ -317,11 +310,8 @@ void loop()     // run over and over again
 
         //if a new peek below the threshold is found add a stroke
         #ifdef LOWPEEK
-          LOWPEEKDetection();
+          StrokeDetection();
           resetThreshhold();
-          lcd.setCursor(0, 0);
-          lcd.print("Stroke Rate ");
-          lcd.print(Stroke_Rate(Strokes, StrokeRateTimer));
           #ifdef STROKE_RATE
           if(millis() - StrokeRateTimer > 5000)
           {
@@ -405,20 +395,52 @@ int getAverageReading(uint8_t Axispin, int Averaging_Interval)
     average /= Averaging_Interval;     // divide total sum by num. avg. to get average
     return average;
 }
+
 //replace OldPositionNegative with the state mechine
 //when it returns true continue with low peek detect 
 bool isMinima(int m_currentaverage, int m_oldaverage,int m_threshhold,bool m_OldPositionNegative)
 {
+  Serial.print("currentaverage");
+        Serial.println(m_currentaverage);
+        Serial.print("ChangeThreshhold");
+        Serial.println(m_oldaverage * STATIC_CHANGE_THRESHHOLD);
   if ((m_currentaverage > m_oldaverage * STATIC_CHANGE_THRESHHOLD)){    // if current is greater than previous (negative slope) and old slope was negative, a local minima was reached
         if(m_OldPositionNegative == false){
           if(m_oldaverage < (m_threshhold * STATIC_PERCENT_THRESHHOLD)){
             return true;
+            //*******go to recovery stage
           }
         }
   }
   return false;
 }
-bool StrokeDetected(uint16_t* m_Strokes)
+bool recoveryState(int m_currentaverage, int m_oldaverage)
+{
+  if (m_currentaverage - m_oldaverage < 0){  // set old slope variable to negative if applicable
+        /* if(OldPositionNegative == true)
+        {
+            int peak = m_oldaverage;
+            Serial.print(F("peak"));
+            Serial.println(peak);
+        } */
+      
+      return false;// go to isMinima()
+    }
+  return true;
+}
+/**
+ * @brief when called the total number of strokes if incremented, the strokes since last stroke rate call is incremented,
+ *        the stroke rate is printed to the lcd, then adds the currentaverage to the array of values to use as thresholds.
+ *        if enough loops have occured the NonStrokeTimerThreshhold is scaled acordingly. theNonStrokeTimer is then reset.
+ *        
+ * 
+ * 
+ * @param m_Strokes 
+ * @param currentaverage 
+ * @return true 
+ * @return false 
+ */
+bool StrokeDetected(uint16_t* m_Strokes, int currentaverage)
 {
               //++++++++++++++++++++++++++++++++++++++++++++++++start of Increment
             // local minima value, do stuff here
@@ -426,28 +448,54 @@ bool StrokeDetected(uint16_t* m_Strokes)
                 Serial.print(F("TotalThreshhold "));
                 Serial.println(threshhold * STATIC_PERCENT_THRESHHOLD);
             #endif
-           // OldPositionNegative = true;      // the if statement already checked for positive slope, so it makes sense to set the value for the next pass here
-            
-            
-            /* #ifdef DEBUG
-              Serial.println(F("oop count "));
-              Serial.print(loops);
-            #endif */
             Strokes++;
+            Stroke_Rate_Strokes++;
             lcd.setCursor(0, 1);
             lcd.print(F("Strokes ")); // Print a message to the LCD.
             lcd.print(Strokes, DEC); // Print a message to the LCD. 
             //+++++++++++++++++++++++++++++++++++++++++++++++++++++++end of Increment
+            //***********************start of Low_value_scanner
+            Low[LowScan] = currentaverage;  //add this minima to the array of minima
+            if(LowScan < LOOP_LIMIT - 3)
+            { 
+              LowScan++;
+            }
+            else
+            {
+              LowScan = 0;
+            //*********************end of Low_value_scanner
+             /*  if 2 strokes have been counted the threshhold can be lowered to half the 
+              time of the last gap. */
+            if((millis() - NonStrokeTimer) > 500  && (millis() - NonStrokeTimer) < 2000)
+                          NonStrokeTimerThreshhold = ((millis() - NonStrokeTimer) * 0.7);
+              //Serial.print(F("++++++++++++++++++++non stroke timer threshhold"));
+              //Serial.println(NonStrokeTimerThreshhold);
+            }
+            NonStrokeTimer = millis();// reset timer
+
             return true;
+            //******go to recovery phase
 }
-#ifdef STROKE_RATE
-  float Stroke_Rate()
+/**
+ * @brief sets the old average to the last avverage then increments the number of loops
+ * 
+ * @param m_oldaverage 
+ * @param m_currentaverage 
+ * @param m_loops 
+ */
+void update_old_values(int* m_oldaverage, int m_currentaverage,uint8_t* m_loops)
+{
+  *m_oldaverage = m_currentaverage;
+  *m_loops++;
+}
+void correctTimer()
+{
+  if(millis() - NonStrokeTimer > 2000)
   {
-    float StrokeRate = ((Stroke_Rate_Strokes/5.0)*60.0);
-    Stroke_Rate_Strokes = 0;
-    return StrokeRate;
+    NonStrokeTimerThreshhold = 700;
+    //Serial.println("+++++++++++++++++++NonStrokeTimerThreshhold");
   }
-#endif
+}
 #ifdef LOWPEEK
 /**
  * @brief 
@@ -457,8 +505,7 @@ bool StrokeDetected(uint16_t* m_Strokes)
  * 
  *  
  */
-
-  void LOWPEEKDetection()
+  void StrokeDetection()
   {
     
     int currentaverage = getAverageReading(AxisPin, NUMBER_OF_AVERAGES);    // current averaged reading
@@ -474,10 +521,8 @@ bool StrokeDetected(uint16_t* m_Strokes)
      // #endif
 
     #endif
-    if(millis() - NonStrokeTimer > 2000)
-    {
-      NonStrokeTimerThreshhold = 700;
-    }
+    correctTimer();
+    
     #ifdef DEBUG
         Serial.print(F("peekdetection begin "));
         Serial.println(OldPositionNegative);
@@ -489,36 +534,7 @@ bool StrokeDetected(uint16_t* m_Strokes)
     if((millis() - NonStrokeTimer > NonStrokeTimerThreshhold))
     {
       if (isMinima(currentaverage, oldaverage, threshhold, OldPositionNegative)){
-            //++++++++++++++++++++++++++++++++++++++++++++++++start of Increment
-            // local minima value, do stuff here
-            #ifdef DEBUG
-                Serial.print(F("TotalThreshhold "));
-                Serial.println(threshhold * STATIC_PERCENT_THRESHHOLD);
-            #endif
-            /* OldPositionNegative = true;      // the if statement already checked for positive slope, so it makes sense to set the value for the next pass here
-            Strokes++;
-            lcd.setCursor(0, 1);
-            lcd.print(F("Strokes ")); // Print a message to the LCD.
-            lcd.print(Strokes, DEC); // Print a message to the LCD.  */
-            //+++++++++++++++++++++++++++++++++++++++++++++++++++++++end of Increment
-            OldPositionNegative = StrokeDetected(&Strokes);
-            Low[LowScan] = currentaverage;  //add this minima to the array of minima
-            if(LowScan < LOOP_LIMIT - 3)
-            { 
-              LowScan++;
-            }
-            else
-            {
-              LowScan = 0;
-             /*  if 2 strokes have been counted the threshhold can be lowered to half the 
-              time of the last gap. */
-            if((millis() - NonStrokeTimer) > 500  && (millis() - NonStrokeTimer) < 2000)
-                          NonStrokeTimerThreshhold = ((millis() - NonStrokeTimer) * 0.7);
-              Serial.print(F("++++++++++++++++++++non stroke timer threshhold"));
-              Serial.println(NonStrokeTimerThreshhold);
-            }
-            NonStrokeTimer = millis();
-           
+           OldPositionNegative = StrokeDetected(&Strokes, currentaverage); 
       }
     }
     #ifdef DEBUG
@@ -528,21 +544,29 @@ bool StrokeDetected(uint16_t* m_Strokes)
       lcd.setCursor(12, 1);
       lcd.print(OldPositionNegative); // Print a message to the LCD.
     #endif
-    if (currentaverage - oldaverage < 0){  // set old slope variable to negative if applicable
-        if(OldPositionNegative == true)
-        {
-            int peak = oldaverage;
-            Serial.print(F("peak"));
-            Serial.println(peak);
-        }
-      OldPositionNegative = false;
-    }
-    oldaverage = currentaverage;    // sets current values to old values
-    loops++;
-    //return OldPositionNegative;
+    //*****************start of recovery
+      OldPositionNegative = recoveryState(currentaverage, oldaverage);
+    //***********************end of recovery
+    update_old_values(&oldaverage, currentaverage, &loops);
     
   }
 #endif
+
+#ifdef STROKE_RATE
+/**
+ * @brief when called the number of strokes (since last call) is devided by the number of seconds 
+ *        that have passed then multiplies it by 60.
+ * 
+ * @return float current stroke rate
+ */
+  float Stroke_Rate()
+  {
+    float StrokeRate = ((Stroke_Rate_Strokes/5.0)*60.0);
+    Stroke_Rate_Strokes = 0;
+    return StrokeRate;
+  }
+#endif
+
 /**
  * @brief finds the lowest value in an array low scan
  * requires: Low[], and Lowest
