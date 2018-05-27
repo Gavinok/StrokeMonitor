@@ -1,0 +1,29 @@
+// AUTOMATICALLY GENERATED FILE. PLEASE DO NOT MODIFY IT MANUALLY
+
+// PIO Unified Debugger
+//
+// Documentation: http://docs.platformio.org/page/plus/debugging.html
+// Configuration: http://docs.platformio.org/page/projectconf/section_env_debug.html
+
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "platformio-debug",
+            "request": "launch",
+            "name": "PlatformIO Debugger",
+            "executable": "c:/Users/gavin/Documents/PlatformIO/Projects/StrokeDetector/.pioenvs/uno/firmware.elf",
+            "toolchainBinDir": "C:/Users/gavin/.platformio/packages/toolchain-atmelavr/bin",
+            "preLaunchTask": "PlatformIO: Pre-Debug",
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "type": "platformio-debug",
+            "request": "launch",
+            "name": "PlatformIO Debugger (Skip Pre-Debug)",
+            "executable": "c:/Users/gavin/Documents/PlatformIO/Projects/StrokeDetector/.pioenvs/uno/firmware.elf",
+            "toolchainBinDir": "C:/Users/gavin/.platformio/packages/toolchain-atmelavr/bin",
+            "internalConsoleOptions": "openOnSessionStart"
+        }
+    ]
+}

@@ -97,7 +97,7 @@ int zRawMax = 512;
   //number of strokes in between writing to sd.
   uint16_t Strokes = -1;
   //array of low peaks used to make the threshold dynamic
-  int Low[LOOP_LIMIT];
+  float Low[LOOP_LIMIT];
   uint8_t LowScan = 0;
   #define MINIMUM_LOWEST 300 // Lowest values that can be considered as legit
 //=======================================================//
@@ -106,10 +106,10 @@ int zRawMax = 512;
 #ifdef LOWPEEK
 
   #define NUMBER_OF_AVERAGES 6  // number of averages to take (removes noise)
-  int oldaverage = 0; // previous averaged reading
+  float oldaverage = 0; // previous averaged reading
   bool OldPositionNegative = false;  // sign of previous slope, true = negative
   //limits what drops in acceleration are considered the recovery phase.
-  int threshhold = 1000;
+  float threshhold = 1000.0;
   #define STATIC_CHANGE_THRESHHOLD 1.005 //1-2//% difference between the previous acceleration and current acceleration to indicate a peek(Lower means that the difference in acceleration when taking a stroke must be larger)
   #define STATIC_PERCENT_THRESHHOLD 1.2 //1-2//what % of the threshold does the previous reading need to be to indicate deceleration(lower means that the negative portion has to be lower)
   uint16_t NonStrokeTimerThreshhold = 900; // this is the threshhold for how far apart a stroke must be to count.
@@ -154,7 +154,7 @@ void ExtractDynamicValues(int *loopsNumber, long *longterm, int *dynamic);
 float Stroke_Rate();
 bool StrokeDetected(uint16_t* m_Strokes, int currentaverage);
 bool isMinima(int m_currentaverage, int m_oldaverage,int m_threshhold,bool m_OldPositionNegative);
-int getAverageReading(uint8_t Axispin, int Averaging_Interval);
+float getAverageReading(uint8_t Axispin, int Averaging_Interval);
 void CalabrateAccel();
 float readScaledAccel(int axisPin);
 void store_Accell_Constents_To_EEPROM();
@@ -171,19 +171,31 @@ void setup()
     Serial.begin(115200);
     Serial.println(F("Running Dope Ass Paddling Program"));
 
-  analogReference(EXTERNAL);
-  if(!get_Accell_Constents_To_EEPROM())
-  {
-    CalabrateAccel();
-    store_Accell_Constents_To_EEPROM();
-  }
+  //analogReference(EXTERNAL);
   #ifdef LCD
     lcd.begin(16, 2); // set up the LCD's number of columns and rows:
+    if(!get_Accell_Constents_To_EEPROM())
+    {
+      CalabrateAccel();
+      store_Accell_Constents_To_EEPROM();
+    }else{
+      lcd.clear();
+      lcd.setCursor(0, 1);
+      lcd.print("Recalabrate?");
+      delay(3000);
+      lcd.clear();
+      if(digitalRead(BUTTON_PIN))
+      {
+        CalabrateAccel();
+        store_Accell_Constents_To_EEPROM();
+      }
+    }
     lcd.setCursor(0, 0);
     lcd.print(F("Running Dope Ass")); // Print a message to the LCD.
     lcd.setCursor(0, 1);
     lcd.print(F("Paddling Program")); // Print a message to the LCD.
     delay(1000);
+    
   #else
   // connect at 115200 so we can read the GPS fast enough.
     Serial.begin(115200);
@@ -411,9 +423,9 @@ void loop()     // run over and over again
   #endif
   }*/
 }
-int getAverageReading(uint8_t Axispin, int Averaging_Interval)
+float getAverageReading(uint8_t Axispin, int Averaging_Interval)
 {
-  int average = 0;    // current averaged reading
+  float average = 0;    // current averaged reading
     for (int scan=0; scan<= Averaging_Interval; scan++){       // loop for NUMBER_OF_AVERAGES
       average += readScaledAccel(Axispin);   // sum up readings assuming that the xaxis is in the same direction as the boat
     }
@@ -423,7 +435,7 @@ int getAverageReading(uint8_t Axispin, int Averaging_Interval)
 
 //replace OldPositionNegative with the state mechine
 //when it returns true continue with low peek detect 
-bool isMinima(int m_currentaverage, int m_oldaverage,int m_threshhold,bool m_OldPositionNegative)
+bool isMinima(float m_currentaverage, float m_oldaverage,float m_threshhold,bool m_OldPositionNegative)
 {
   Serial.print("currentaverage");
         Serial.println(m_currentaverage);
@@ -439,7 +451,7 @@ bool isMinima(int m_currentaverage, int m_oldaverage,int m_threshhold,bool m_Old
   }
   return false;
 }
-bool recoveryState(int m_currentaverage, int m_oldaverage)
+bool recoveryState(float m_currentaverage, float m_oldaverage)
 {
   if (m_currentaverage - m_oldaverage < 0){  // set old slope variable to negative if applicable
         /* if(OldPositionNegative == true)
@@ -465,7 +477,7 @@ bool recoveryState(int m_currentaverage, int m_oldaverage)
  * @return true 
  * @return false 
  */
-bool StrokeDetected(uint16_t* m_Strokes, int currentaverage)
+bool StrokeDetected(uint16_t* m_Strokes, float currentaverage)
 {
               //++++++++++++++++++++++++++++++++++++++++++++++++start of Increment
             // local minima value, do stuff here
@@ -508,7 +520,7 @@ bool StrokeDetected(uint16_t* m_Strokes, int currentaverage)
  * @param m_currentaverage 
  * @param m_loops 
  */
-void update_old_values(int* m_oldaverage, int m_currentaverage,uint8_t* m_loops)
+void update_old_values(float* m_oldaverage, float m_currentaverage,uint8_t* m_loops)
 {
   *m_oldaverage = m_currentaverage;
   *m_loops++;
@@ -533,7 +545,7 @@ void correctTimer()
   void StrokeDetection()
   {
     
-    int currentaverage = getAverageReading(AxisPin, NUMBER_OF_AVERAGES);    // current averaged reading
+    float currentaverage = getAverageReading(AxisPin, NUMBER_OF_AVERAGES);    // current averaged reading
     #ifdef DEBUG
       Serial.print(F("currentaverage "));
       Serial.println(currentaverage);
@@ -623,7 +635,7 @@ void resetThreshhold()
   if(loops >= LOOP_LIMIT)
   {
     //sets Lowest to the lowest value in the array low[]
-    int Lowest = findLowest();
+    float Lowest = findLowest();
     #ifdef DEBUG
       Serial.print(F("lowest "));
       Serial.println(Lowest);
@@ -658,9 +670,15 @@ void ExtractDynamicValues(int *loopsNumber, long *longterm, int *dynamic)
 {
   int currentaverage[3] = {0, 0, 0};    // current averaged reading
   for (int scan=0; scan<= NUMBER_OF_AVERAGES; scan++){       // loop for NUMBER_OF_AVERAGES
-        currentaverage[0] += analogRead(XPIN);   // sum up readings assuming that the xaxis is in the same direction as the boat
+       /*  currentaverage[0] += analogRead(XPIN);   // sum up readings assuming that the xaxis is in the same direction as the boat
+        Serial.print("XPIN");
+        Serial.println(analogRead(XPIN)); */
         currentaverage[1] += analogRead(YPIN);
-        currentaverage[2] += analogRead(ZPIN);   
+       /*  Serial.print("YPIN");
+        Serial.println(analogRead(YPIN)); */
+        currentaverage[2] += analogRead(ZPIN); 
+        /* Serial.print("ZPIN");
+        Serial.println(analogRead(ZPIN));   */
       }
      currentaverage[0] /= NUMBER_OF_AVERAGES;     // divide total sum by num. avg. to get average
      currentaverage[1] /= NUMBER_OF_AVERAGES;     
@@ -692,32 +710,59 @@ uint8_t InitializeAxis()
   {
      ExtractDynamicValues(&loopsNumber, longterm, dynamic);
   }
+  lcd.print("now");
   //second we wait for the individual to start paddling
-  while((dynamic[0] < 5) || (dynamic[1] < 5) || (dynamic[2] < 5))
+  while((dynamic[1] < 5) || (dynamic[2] < 5))
   {
      ExtractDynamicValues(&loopsNumber, longterm, dynamic);
-  }
+      Serial.print("dynamic[0]");
+      Serial.println(dynamic[0]);
+      Serial.print("dynamic[1]");
+      Serial.println(dynamic[1]);
+      Serial.print("dynamic[2]");
+      Serial.println(dynamic[2]);
+  }/* 
+  while((dynamic[0] < 1.0) || (dynamic[1] < 1.0) || (dynamic[2] < 1.0))
+  {
+     ExtractDynamicValues(&loopsNumber, longterm, dynamic);
+      Serial.print("dynamic[0]");
+      Serial.println(dynamic[0]);
+      Serial.print("dynamic[1]");
+      Serial.println(dynamic[1]);
+      Serial.print("dynamic[2]");
+      Serial.println(dynamic[2]);
+  } */
   lcd.print("pass");
   //finally we determin the axes to measure the acceleration in
   for(int i = 0; i < 500; i++)
   {
      ExtractDynamicValues(&loopsNumber, longterm, dynamic);
      //if it has the largest delta but is not the highest in total(that is from gravity)
-     if((largestAmplitude < dynamic[0]) && !((longterm[0] > longterm[2]) && (longterm[0] > longterm[1])))
+     /* if((largestAmplitude < dynamic[0]) && !((longterm[0] > longterm[2]) && (longterm[0] > longterm[1])))
       {
         largestAmplitude = dynamic[0];
         axis = XPIN;
-      }
-      if((largestAmplitude < dynamic[1]) && !((longterm[1] > longterm[2]) && (longterm[1] > longterm[0])))
+      } */
+      if((largestAmplitude < dynamic[1])  && !((longterm[1] > longterm[2])))
       {
         largestAmplitude = dynamic[1];
         axis = YPIN;
       }
-      if((largestAmplitude < dynamic[2]) && !((longterm[2] > longterm[0]) && (longterm[2] > longterm[1])))
+      if((largestAmplitude < dynamic[2])  &&  !(longterm[2] > longterm[1]))
       {
         largestAmplitude = dynamic[2];
         axis = ZPIN;
       }
+      /* if((largestAmplitude < dynamic[1])  && !((longterm[1] > longterm[2])  && !(longterm[1] > longterm[0])))
+      {
+        largestAmplitude = dynamic[1];
+        axis = YPIN;
+      }
+      if((largestAmplitude < dynamic[2])  && !((longterm[2] > longterm[0]) && !(longterm[2] > longterm[1])))
+      {
+        largestAmplitude = dynamic[2];
+        axis = ZPIN;
+      } */
   }
   lcd.clear();
   Serial.print(F("the axis is"));
@@ -804,27 +849,39 @@ const int sampleSize = 10;
       switch(step)
       {
         case 0:
-        Serial.println("place on right side and hold button");
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("place on right side and hold button");
         break;
 
         case 1:
-        Serial.println("place on left side and hold button");
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("place on left side and hold button");
         break;
 
         case 2:
-        Serial.println("place on front side and hold button");
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("place on front side and hold button");
         break;
 
         case 3:
-        Serial.println("place on back side and hold button");
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("place on back side and hold button");
         break;
 
         case 4:
-        Serial.println("place screen facing up and hold button");
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("place facing up and hold button");
         break;
 
         case 5:
-        Serial.println("place screen facing down and hold button");
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("place facing down and hold button");
         break;
       }
       if(step == 6)
@@ -909,19 +966,19 @@ bool get_Accell_Constents_To_EEPROM()
   Serial.println(xRawMax);
   address+= 3;
   EEPROM.get(address, yRawMin);
-  Serial.print("xRawMin");
-  Serial.println(xRawMin);
+  Serial.print("yRawMin");
+  Serial.println(yRawMin);
   address+= 3;
   EEPROM.get(address, yRawMax);
-  Serial.print("xRawMin");
-  Serial.println(xRawMin);
+  Serial.print("yRawMax");
+  Serial.println(yRawMax);
   address+= 3;
   EEPROM.get(address, zRawMin);
-  Serial.print("xRawMin");
-  Serial.println(xRawMin);
+  Serial.print("zRawMin");
+  Serial.println(zRawMin);
   address+= 3;
   EEPROM.get(address, zRawMax);
-  Serial.print("xRawMin");
-  Serial.println(xRawMin);
+  Serial.print("zRawMax");
+  Serial.println(zRawMax);
   return Callabrated;
 }
