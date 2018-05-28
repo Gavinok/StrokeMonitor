@@ -110,16 +110,17 @@ int zRawMax = 0;
   bool OldPositionNegative = false;  // sign of previous slope, true = negative
   //limits what drops in acceleration are considered the recovery phase.
   int threshhold = 1000.0;
-  #define STATIC_CHANGE_THRESHHOLD 1.08 //1-2//% difference between the previous acceleration and current acceleration to indicate a peek(Lower means that the difference in acceleration when taking a stroke must be larger)
+  #define STATIC_CHANGE_THRESHHOLD 1.1 //1-2//% difference between the previous acceleration and current acceleration to indicate a peek(Lower means that the difference in acceleration when taking a stroke must be larger)
   #define STATIC_PERCENT_THRESHHOLD 1.2 //1-2//what % of the threshold does the previous reading need to be to indicate deceleration(lower means that the negative portion has to be lower)
   uint16_t NonStrokeTimerThreshhold = 900; // this is the threshhold for how far apart a stroke must be to count.
   uint8_t AxisPin = 69;// this is the axis used for detecting strokes 0 for x, 1 for y, 2 for z
 #endif
 //=======================================================//
 #ifdef STROKE_RATE
-  #define DELAY_BETWEEN_STROKERATE_READING 5000
+  #define DELAY_BETWEEN_STROKERATE_READING 3500
   uint8_t Stroke_Rate_Strokes = -1;
   uint32_t StrokeRateTimer = millis();
+  float stroke_rate_global = 0;
 #endif
 
 #ifdef SD_CARD
@@ -150,7 +151,7 @@ int zRawMax = 0;
 int resetThreshhold(int m_threshhold, uint8_t m_loops, int m_Low[LOOP_LIMIT]);
 int findLowest(int m_Low[LOOP_LIMIT]);
 void StrokeDetection();
-uint8_t InitializeAxis();
+uint8_t InitializeAxis(bool paddling);
 void ExtractDynamicValues(int *loopsNumber, int *longterm, int *dynamic);
 float Stroke_Rate(uint8_t Stroke_Rate_Strokes, int time_between_readings);
 bool StrokeDetected(uint16_t* m_Strokes, int currentaverage);
@@ -158,8 +159,8 @@ bool isMinima(int m_currentaverage, int m_oldaverage,int m_threshhold,bool m_Old
 int getAverageReading(uint8_t Axispin, int Averaging_Interval);
 void CalabrateAccel();
 int readScaledAccel(int axisPin);
-void store_Accell_Constents_To_EEPROM();
-bool get_Accell_Constents_To_EEPROM();
+void storeAccellConstentsToEEPROM();
+bool getAccellConstentsToEEPROM();
 
 //Initialize timer
 uint32_t NonStrokeTimer = millis();
@@ -176,20 +177,20 @@ void setup()
   //analogReference(EXTERNAL);
   #ifdef LCD
     lcd.begin(16, 2); // set up the LCD's number of columns and rows:
-    if(!get_Accell_Constents_To_EEPROM())
+    if(!getAccellConstentsToEEPROM())
     {
       CalabrateAccel();
-      store_Accell_Constents_To_EEPROM();
+      storeAccellConstentsToEEPROM();
     }else{
       lcd.clear();
       lcd.setCursor(0, 1);
-      lcd.print("Recalabrate?");
+      lcd.print(F("Recalabrate?"));
       delay(3000);
       lcd.clear();
       if(digitalRead(BUTTON_PIN))
       {
         CalabrateAccel();
-        store_Accell_Constents_To_EEPROM();
+        storeAccellConstentsToEEPROM();
       }
     }
     lcd.setCursor(0, 0);
@@ -235,7 +236,7 @@ void setup()
   lcd.print(F("Please Start"));
   lcd.setCursor(0, 1);
   lcd.print(F("Paddling"));
-  AxisPin = InitializeAxis();
+  AxisPin = InitializeAxis(false);
   lcd.setCursor(0, 0);
   /* lcd.print(F("The Axis is "));
   switch(AxisPin)
@@ -353,10 +354,15 @@ void loop()     // run over and over again
           if(millis() - StrokeRateTimer > DELAY_BETWEEN_STROKERATE_READING)
           {
             lcd.setCursor(0, 0);
-            lcd.print("Stroke Rate ");
-            lcd.print(Stroke_Rate(Stroke_Rate_Strokes, DELAY_BETWEEN_STROKERATE_READING));
+            lcd.print(F("Stroke Rate "));
+            stroke_rate_global = Stroke_Rate(Stroke_Rate_Strokes, DELAY_BETWEEN_STROKERATE_READING);
+            lcd.print(stroke_rate_global);
             Stroke_Rate_Strokes = 0;
             StrokeRateTimer = millis();
+            if(stroke_rate_global > 90)
+            {
+              AxisPin = InitializeAxis(true);
+            }
           }
           #endif
         #endif
@@ -438,10 +444,10 @@ int getAverageReading(uint8_t Axispin, int Averaging_Interval)
 //when it returns true continue with low peek detect 
 bool isMinima(int m_currentaverage, int m_oldaverage,int m_threshhold,bool m_OldPositionNegative)
 {
-  Serial.print("currentaverage");
+   /* Serial.print("currentaverage");
         Serial.println(m_currentaverage);
         Serial.print("ChangeThreshhold");
-        Serial.println(m_oldaverage * STATIC_CHANGE_THRESHHOLD);
+        Serial.println(m_oldaverage * STATIC_CHANGE_THRESHHOLD);  */
   if ((m_currentaverage > m_oldaverage * STATIC_CHANGE_THRESHHOLD)){    // if current is greater than previous (negative slope) and old slope was negative, a local minima was reached
         if(m_OldPositionNegative == false){
           if(m_oldaverage < (m_threshhold * STATIC_PERCENT_THRESHHOLD)){
@@ -494,7 +500,7 @@ bool StrokeDetected(uint16_t* m_Strokes, int currentaverage)
             //+++++++++++++++++++++++++++++++++++++++++++++++++++++++end of Increment
             //***********************start of Low_value_scanner
             Low[LowScan] = currentaverage;  //add this minima to the array of minima
-            if(LowScan < LOOP_LIMIT - 3)
+            if(LowScan < LOOP_LIMIT - 2)
             { 
               LowScan++;
             }
@@ -521,7 +527,7 @@ bool StrokeDetected(uint16_t* m_Strokes, int currentaverage)
  * @param m_currentaverage 
  * @param m_loops 
  */
-void update_old_values(int* m_oldaverage, int m_currentaverage,uint8_t* m_loops)
+void UpdateOldValues(int* m_oldaverage, int m_currentaverage,uint8_t* m_loops)
 {
   *m_oldaverage = m_currentaverage;
   *m_loops++;
@@ -585,7 +591,7 @@ void correctTimer()
     //*****************start of recovery
       OldPositionNegative = recoveryState(currentaverage, oldaverage);
     //***********************end of recovery
-    update_old_values(&oldaverage, currentaverage, &loops);
+    UpdateOldValues(&oldaverage, currentaverage, &loops);
     
   }
 #endif
@@ -674,13 +680,13 @@ void ExtractDynamicValues(int *loopsNumber, long *longterm, int *dynamic)
 {
   int currentaverage[3] = {0, 0, 0};    // current averaged reading
   for (int scan=0; scan<= NUMBER_OF_AVERAGES; scan++){       // loop for NUMBER_OF_AVERAGES
-        currentaverage[0] += analogRead(XPIN);   // sum up readings assuming that the xaxis is in the same direction as the boat
+        currentaverage[0] += readScaledAccel(XPIN);   // sum up readings assuming that the xaxis is in the same direction as the boat
         /*  Serial.print("XPIN ");
         Serial.println(analogRead(XPIN));  */
-        currentaverage[1] += analogRead(YPIN);
+        currentaverage[1] += readScaledAccel(YPIN);
         /* Serial.print("YPIN ");
         Serial.println(analogRead(YPIN)); */
-        currentaverage[2] += analogRead(ZPIN);   
+        currentaverage[2] += readScaledAccel(ZPIN);   
         /* Serial.print("ZPIN ");
         Serial.println(analogRead(ZPIN)); */
       }
@@ -702,31 +708,33 @@ void ExtractDynamicValues(int *loopsNumber, long *longterm, int *dynamic)
  * 
  * @return uint8_t the chosen axis on the accelerometer to use for stroke detection 0 is x, 1 is y, 2 is z,
  */
-uint8_t InitializeAxis()
+uint8_t InitializeAxis(bool paddling)
 {
   uint8_t axis = 0;
   long longterm[3] = {0, 0, 0};
   int dynamic[3];
   int loopsNumber = 0;
   int largestAmplitude = 0;
-  //first we let the dynamic readings stabilize
-  while((dynamic[0] > 50) || (dynamic[1] > 50) || (dynamic[2] > 50))
+  if(!paddling)
   {
-     ExtractDynamicValues(&loopsNumber, longterm, dynamic);
+    //first we let the dynamic readings stabilize
+    while((dynamic[0] > 50) || (dynamic[1] > 50) || (dynamic[2] > 50))
+    {
+      ExtractDynamicValues(&loopsNumber, longterm, dynamic);
+    }
+    //second we wait for the individual to start paddling
+    while((dynamic[0] < 3) || (dynamic[1] < 3) || (dynamic[2] < 3))
+    {
+      ExtractDynamicValues(&loopsNumber, longterm, dynamic);
+      /* Serial.print("dynamic[0] ");
+      Serial.println(dynamic[0]);
+      Serial.print("dynamic[1] ");
+      Serial.println(dynamic[1]); 
+      Serial.print("dynamic[2] ");
+      Serial.println(dynamic[2]);  */
+    }
+    lcd.print(F("pass"));
   }
-  lcd.print("now");
-  //second we wait for the individual to start paddling
-  while((dynamic[0] < 1.0) || (dynamic[1] < 1.0) || (dynamic[2] < 1.0))
-  {
-    ExtractDynamicValues(&loopsNumber, longterm, dynamic);
-    Serial.print("dynamic[0] ");
-    Serial.println(dynamic[0]);
-    Serial.print("dynamic[1] ");
-    Serial.println(dynamic[1]); 
-    Serial.print("dynamic[2] ");
-    Serial.println(dynamic[2]);
-  }
-  lcd.print("pass");
   //finally we determin the axes to measure the acceleration in
   for(int i = 0; i < 500; i++)
   {
@@ -759,7 +767,6 @@ uint8_t InitializeAxis()
 //
 void AutoCalibrate(int xRaw, int yRaw, int zRaw)
 {
-  Serial.println(F("Calibrate"));
   if (xRaw < xRawMin)
   {
     xRawMin = xRaw;
@@ -792,9 +799,6 @@ void CalabrateAccel()
   // Raw Ranges:
   // initialize to mid-range and allow calibration to
   // find the minimum and maximum for each axis
-  
-  // Take multiple samples to reduce noise
-  const int sampleSize = 10;
  
   int step = 0;
   bool next = false;
@@ -873,28 +877,24 @@ void CalabrateAccel()
 
 int readScaledAccel(int axisPin)
 {
-  int Scaled;
   int Accel;
   // Convert raw values to 'milli-Gs"
   switch(axisPin)
   {
     case XPIN:
-      Scaled = map(analogRead(axisPin), xRawMin, xRawMax, 0, 1000);
-      Accel = Scaled;
+      Accel = map(analogRead(axisPin), xRawMin, xRawMax, 0, 1000);\
       return Accel;
 
     case YPIN:
-      Scaled = map(analogRead(axisPin), yRawMin, yRawMax, 0, 1000);
-      Accel = Scaled;
+      Accel = map(analogRead(axisPin), yRawMin, yRawMax, 0, 1000);
       return Accel;
 
     case ZPIN:
-      Scaled = map(analogRead(axisPin), zRawMin, zRawMax, 0, 1000);
-      Accel = Scaled;
+      Accel = map(analogRead(axisPin), zRawMin, zRawMax, 0, 1000);
       return Accel;
   }
 }
-void store_Accell_Constents_To_EEPROM()
+void storeAccellConstentsToEEPROM()
 {
   bool Callabrated = true;
   int address = 0;
@@ -924,7 +924,7 @@ void store_Accell_Constents_To_EEPROM()
   Serial.print(F("zRawMax"));
   Serial.println(zRawMax);
 }
-bool get_Accell_Constents_To_EEPROM()
+bool getAccellConstentsToEEPROM()
 {
   bool Callabrated = false;
   int address = 0;
